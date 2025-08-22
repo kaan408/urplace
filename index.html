@@ -17,7 +17,6 @@
             flex-direction: column;
         }
 
-        /* Tuvali ve başlığı ortalamak için ana içerik alanı */
         .main-content {
             flex-grow: 1;
             display: flex;
@@ -26,7 +25,7 @@
             align-items: center; 
             padding: 20px;
             box-sizing: border-box;
-            overflow: auto; /* Tuval ekrana sığmazsa kaydırma çubukları çıksın */
+            overflow: auto;
         }
         
         .canvas-wrapper {
@@ -50,59 +49,37 @@
         
         #hover-canvas {
             background-color: transparent;
-            cursor: crosshair; /* İmleç artık doğrudan buradan yönetiliyor */
+            cursor: crosshair;
             z-index: 1; 
         }
 
-        /* KONTROL PANELİ */
-        .controls {
-            padding: 10px 20px;
-            background-color: #fff;
-            border-top: 1px solid #ccc;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            flex-shrink: 0;
-            z-index: 10;
-        }
-
-        .user-info, .timer-info {
-            font-size: 1.1em;
-            margin: 0 15px;
-        }
-
-        /* RENK SEÇİCİ STİLİ */
-        #color-picker-container {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-        #color-picker {
-            width: 50px;
-            height: 40px;
-            border: 1px solid #ccc;
-            border-radius: 5px;
-            cursor: pointer;
-            padding: 0;
-        }
-        #color-picker-label {
+        /* ONLİNE KULLANICILAR KUTUSU */
+        #online-users-container {
+            position: fixed;
+            top: 15px;
+            right: 15px;
+            background-color: rgba(255, 255, 255, 0.9);
+            padding: 10px 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+            z-index: 1002;
+            font-size: 1em;
             font-weight: bold;
         }
-
-        /* BİLGİ KUTUCUĞU (TOOLTIP) */
-        #tooltip {
-            position: fixed;
-            display: none;
-            background-color: rgba(0, 0, 0, 0.8);
-            color: white;
-            padding: 8px 12px;
-            border-radius: 5px;
-            font-size: 0.9em;
-            pointer-events: none;
-            z-index: 1001;
-            white-space: nowrap;
+        #online-users-container span {
+            color: #28a745;
         }
 
+        /* KONTROL PANELİ */
+        .controls{padding:10px 20px;background-color:#fff;border-top:1px solid #ccc;display:flex;justify-content:space-between;align-items:center;flex-shrink:0;z-index:10;box-sizing:border-box}
+        .user-info,.timer-info{font-size:1.1em;margin:0 15px}
+        #color-picker-container{display:flex;align-items:center;gap:10px}
+        #color-picker{width:50px;height:40px;border:1px solid #ccc;border-radius:5px;cursor:pointer;padding:0}
+        #color-picker-label{font-weight:bold}
+        
+        /* BİLGİ KUTUCUĞU (TOOLTIP) */
+        #tooltip{position:fixed;display:none;background-color:rgba(0,0,0,.8);color:#fff;padding:8px 12px;border-radius:5px;font-size:.9em;pointer-events:none;z-index:1001;white-space:nowrap}
+        
         /* MODAL (KULLANICI GİRİŞİ) */
         .modal-overlay{position:fixed;top:0;left:0;width:100%;height:100%;background-color:rgba(0,0,0,.7);display:flex;justify-content:center;align-items:center;z-index:1000}
         .modal-content{background-color:#fff;padding:30px;border-radius:10px;text-align:center}
@@ -118,6 +95,10 @@
             <input type="text" id="username-input" placeholder="İsminiz..." maxlength="15">
             <button id="save-username-btn">Kaydet ve Başla</button>
         </div>
+    </div>
+
+    <div id="online-users-container">
+        Online Kullanıcılar: <span id="online-users-count">0</span>
     </div>
 
     <main class="main-content">
@@ -143,10 +124,8 @@
         </div>
     </div>
 
-    <!-- Gerekli Kütüphaneler -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     
-    <!-- Ana Uygulama Kodu -->
     <script>
         // --- SUPABASE AYARLARI ---
         const SUPABASE_URL = 'https://mruogrrmbhehharznuru.supabase.co';
@@ -155,6 +134,7 @@
         const supabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
         // --- GLOBAL DEĞİŞKENLER ---
+        const onlineUsersCount = document.getElementById('online-users-count');
         const canvas = document.getElementById('main-canvas');
         const ctx = canvas.getContext('2d');
         const hoverCanvas = document.getElementById('hover-canvas');
@@ -173,9 +153,10 @@
         
         let selectedColor = colorPicker.value;
         let username = '';
-        const COOLDOWN_SECONDS = 3;
+        const COOLDOWN_SECONDS = 3; 
         
         const pixelDataMap = new Map();
+        let channel;
 
         // --- KURULUM FONKSİYONLARI ---
         function setupColorPicker() {
@@ -223,7 +204,6 @@
                 }
             }
         }
-
         async function fetchInitialCanvas() {
             console.log("Mevcut pikseller çekiliyor...");
             pixelDataMap.clear();
@@ -310,12 +290,10 @@
                 }
             }
         });
-
         hoverCanvas.addEventListener('mouseout', () => {
             hoverCtx.clearRect(0, 0, hoverCanvas.width, hoverCanvas.height);
             tooltip.style.display = 'none';
         });
-
         hoverCanvas.addEventListener('click', async (e) => {
             if (!username) { alert("Lütfen önce bir kullanıcı adı belirleyin."); return; }
             if (!checkCooldown()) { alert("Lütfen bir sonraki piksel için bekleyin."); return; }
@@ -343,17 +321,55 @@
                 startCooldownTimer();
             }
         });
+        
+        // --- ONLİNE KULLANICI VE GÜNCELLEMELER ---
+        function updateOnlineUsersDisplay(presenceState) {
+            const users = new Set();
+            for (const id in presenceState) {
+                presenceState[id].forEach(presence => {
+                    users.add(presence.key);
+                });
+            }
+            onlineUsersCount.textContent = users.size;
+        }
 
-        // --- GERÇEK ZAMANLI GÜNCELLEMELER ---
         function subscribeToChanges() {
-            supabaseClient.channel('pixels_changes')
-                .on('postgres_changes', { event: '*', schema: 'public', table: 'pixels' }, (payload) => {
-                    const { x, y, color, username } = payload.new;
-                    drawGridCell(x, y, color);
-                    const key = `${x},${y}`;
-                    pixelDataMap.set(key, { username: username, color: color });
-                })
-                .subscribe();
+            if (channel) {
+                supabaseClient.removeChannel(channel);
+            }
+            
+            channel = supabaseClient.channel('pixels_changes', {
+                config: {
+                    presence: { key: username },
+                },
+            });
+
+            channel.on('postgres_changes', { event: '*', schema: 'public', table: 'pixels' }, (payload) => {
+                const { x, y, color, username: pixelOwner } = payload.new;
+                drawGridCell(x, y, color);
+                const key = `${x},${y}`;
+                pixelDataMap.set(key, { username: pixelOwner, color: color });
+            });
+
+            channel.on('presence', { event: 'sync' }, () => {
+                const presenceState = channel.presenceState();
+                updateOnlineUsersDisplay(presenceState);
+            });
+            channel.on('presence', { event: 'join' }, () => {
+                const presenceState = channel.presenceState();
+                updateOnlineUsersDisplay(presenceState);
+            });
+            channel.on('presence', { event: 'leave' }, () => {
+                const presenceState = channel.presenceState();
+                updateOnlineUsersDisplay(presenceState);
+            });
+
+            channel.subscribe(async (status) => {
+                if (status === 'SUBSCRIBED') {
+                    await channel.track({ online_at: new Date().toISOString() });
+                    console.log(`Kanala ${username} olarak abone olundu.`);
+                }
+            });
         }
 
         // --- BAŞLANGIÇ FONKSİYONU ---
