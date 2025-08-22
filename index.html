@@ -158,6 +158,16 @@
         const pixelDataMap = new Map();
         let channel;
 
+        function getUniqueUserId() {
+            let userId = localStorage.getItem('unique_user_id');
+            if (!userId) {
+                userId = Date.now().toString(36) + Math.random().toString(36).substring(2);
+                localStorage.setItem('unique_user_id', userId);
+            }
+            return userId;
+        }
+        const uniqueUserId = getUniqueUserId();
+
         // --- KURULUM FONKSİYONLARI ---
         function setupColorPicker() {
             colorPicker.addEventListener('input', (e) => {
@@ -324,13 +334,8 @@
         
         // --- ONLİNE KULLANICI VE GÜNCELLEMELER ---
         function updateOnlineUsersDisplay(presenceState) {
-            const users = new Set();
-            for (const id in presenceState) {
-                presenceState[id].forEach(presence => {
-                    users.add(presence.key);
-                });
-            }
-            onlineUsersCount.textContent = users.size;
+            const userCount = Object.keys(presenceState).length;
+            onlineUsersCount.textContent = userCount;
         }
 
         function subscribeToChanges() {
@@ -340,7 +345,7 @@
             
             channel = supabaseClient.channel('pixels_changes', {
                 config: {
-                    presence: { key: username },
+                    presence: { key: uniqueUserId },
                 },
             });
 
@@ -366,8 +371,11 @@
 
             channel.subscribe(async (status) => {
                 if (status === 'SUBSCRIBED') {
-                    await channel.track({ online_at: new Date().toISOString() });
-                    console.log(`Kanala ${username} olarak abone olundu.`);
+                    await channel.track({ 
+                        username: username, 
+                        online_at: new Date().toISOString() 
+                    });
+                    console.log(`Kanala ${username} olarak (ID: ${uniqueUserId}) abone olundu.`);
                 }
             });
         }
