@@ -14,12 +14,13 @@
             display: flex;
             flex-direction: column;
             align-items: center;
-            overflow: hidden; /* Sayfanın kaymasını engelle */
+            overflow: hidden; 
         }
 
-        .container {
-            text-align: center;
-            width: 1920px; /* Canvas ile aynı genişlikte */
+        .canvas-wrapper {
+            position: relative;
+            width: 1920px;
+            height: 1080px;
             margin-top: 20px;
         }
 
@@ -27,10 +28,22 @@
             color: #333;
         }
 
-        canvas {
+        .canvas-wrapper canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
             border: 2px solid #333;
+        }
+
+        #main-canvas {
             background-color: #ffffff;
+            z-index: 0; /* Alttaki tuval */
+        }
+        
+        #hover-canvas {
+            background-color: transparent;
             cursor: crosshair;
+            z-index: 1; /* Üstteki, tıklanabilir tuval */
         }
 
         .controls {
@@ -59,7 +72,7 @@
         .color-box {
             width: 30px;
             height: 30px;
-            border: 3px solid transparent; /* Çerçeveyi daha görünür yaptım */
+            border: 3px solid transparent; 
             border-radius: 5px;
             cursor: pointer;
             transition: transform 0.2s, border-color 0.2s;
@@ -68,8 +81,7 @@
         .color-box:hover {
             transform: scale(1.1);
         }
-
-        /* DÜZELTME: Seçili kutunun çerçevesini daha belirgin hale getirdim */
+        
         .color-box.selected {
             border-color: #007bff;
             transform: scale(1.2);
@@ -128,7 +140,10 @@
     <!-- Ana İçerik -->
     <div class="container">
         <h1>Global Tuval</h1>
-        <canvas id="main-canvas" width="1920" height="1080"></canvas>
+        <div class="canvas-wrapper">
+            <canvas id="main-canvas" width="1920" height="1080"></canvas>
+            <canvas id="hover-canvas" width="1920" height="1080"></canvas>
+        </div>
     </div>
 
     <!-- Kontrol Paneli -->
@@ -136,15 +151,13 @@
         <div class="user-info">
             Kullanıcı: <strong id="username-display">...</strong>
         </div>
-        <div id="color-palette">
-            <!-- Renkler JavaScript ile eklenecek -->
-        </div>
+        <div id="color-palette"></div>
         <div class="timer-info">
             Kalan Süre: <strong id="timer-display">Hazır!</strong>
         </div>
     </div>
 
-    <!-- Supabase Kütüphanesini ekliyoruz (Bu satır önemli!) -->
+    <!-- Supabase Kütüphanesini ekliyoruz -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     
     <!-- ================= JAVASCRIPT KODLARI BURADA ================= -->
@@ -159,6 +172,9 @@
         // --- GLOBAL DEĞİŞKENLER ---
         const canvas = document.getElementById('main-canvas');
         const ctx = canvas.getContext('2d');
+        const hoverCanvas = document.getElementById('hover-canvas');
+        const hoverCtx = hoverCanvas.getContext('2d');
+        
         const colorPalette = document.getElementById('color-palette');
         const timerDisplay = document.getElementById('timer-display');
         const usernameDisplay = document.getElementById('username-display');
@@ -166,10 +182,9 @@
         const usernameInput = document.getElementById('username-input');
         const saveUsernameBtn = document.getElementById('save-username-btn');
 
-        // --- DÜZELTME 1: Başlangıç değeri vermiyoruz, aşağıda atayacağız ---
         let selectedColor; 
         let username = '';
-        const COOLDOWN_SECONDS = 60; // 1 dakika
+        const COOLDOWN_SECONDS = 60;
 
         const COLORS = [
             '#FF0000', '#00FF00', '#0000FF', '#FFFF00', '#FF00FF', '#00FFFF', 
@@ -199,7 +214,7 @@
                 init(); 
             }
         });
-
+        
         // --- RENK PALETİ OLUŞTURMA ---
         function createColorPalette() {
             colorPalette.innerHTML = '';
@@ -209,27 +224,23 @@
                 colorBox.style.backgroundColor = color;
                 colorBox.dataset.color = color;
                 colorBox.addEventListener('click', () => {
-                    // Önceki seçilinin class'ını kaldır
                     const oldSelected = document.querySelector('.color-box.selected');
                     if (oldSelected) {
                         oldSelected.classList.remove('selected');
                     }
-                    // Yeni tıklanana class ekle
                     colorBox.classList.add('selected');
-                    // Hafızadaki rengi güncelle
                     selectedColor = color;
                 });
                 colorPalette.appendChild(colorBox);
             });
             
-            // --- DÜZELTME 2: Sayfa ilk açıldığında ilk rengi hem görsel hem de kodda seçili yap ---
             const firstColorBox = colorPalette.firstChild;
             if (firstColorBox) {
                 firstColorBox.classList.add('selected');
-                selectedColor = firstColorBox.dataset.color; // Hafızadaki rengi de ilk renge ayarla
+                selectedColor = firstColorBox.dataset.color;
             }
         }
-
+        
         // --- TUVAL ÇİZİMİ ---
         function drawPixel(x, y, color) {
             ctx.fillStyle = color;
@@ -249,15 +260,14 @@
                 console.log(`${data.length} piksel yüklendi.`);
             }
         }
-
+        
         // --- ZAMANLAYICI (COOLDOWN) ---
         let cooldownInterval;
         function startCooldownTimer() {
             let timeLeft = COOLDOWN_SECONDS;
             localStorage.setItem('last_pixel_time', Date.now());
-            
             timerDisplay.textContent = `${timeLeft}s`;
-            canvas.style.cursor = 'not-allowed';
+            hoverCanvas.style.cursor = 'not-allowed';
 
             cooldownInterval = setInterval(() => {
                 timeLeft--;
@@ -265,7 +275,7 @@
                 if (timeLeft <= 0) {
                     clearInterval(cooldownInterval);
                     timerDisplay.textContent = 'Hazır!';
-                    canvas.style.cursor = 'crosshair';
+                    hoverCanvas.style.cursor = 'crosshair';
                 }
             }, 1000);
         }
@@ -283,12 +293,12 @@
                 return false;
             }
         }
-
+        
         function startCooldownTimerFrom(startTime) {
             clearInterval(cooldownInterval);
             let timeLeft = startTime;
             timerDisplay.textContent = `${timeLeft}s`;
-            canvas.style.cursor = 'not-allowed';
+            hoverCanvas.style.cursor = 'not-allowed';
 
             cooldownInterval = setInterval(() => {
                 timeLeft--;
@@ -296,13 +306,27 @@
                 if (timeLeft <= 0) {
                     clearInterval(cooldownInterval);
                     timerDisplay.textContent = 'Hazır!';
-                    canvas.style.cursor = 'crosshair';
+                    hoverCanvas.style.cursor = 'crosshair';
                 }
             }, 1000);
         }
 
         // --- OLAY DİNLEYİCİLERİ ---
-        canvas.addEventListener('click', async (e) => {
+        hoverCanvas.addEventListener('mousemove', (e) => {
+            const rect = hoverCanvas.getBoundingClientRect();
+            const x = Math.floor(e.clientX - rect.left);
+            const y = Math.floor(e.clientY - rect.top);
+
+            hoverCtx.clearRect(0, 0, hoverCanvas.width, hoverCanvas.height);
+            hoverCtx.fillStyle = selectedColor;
+            hoverCtx.fillRect(x, y, 1, 1);
+        });
+
+        hoverCanvas.addEventListener('mouseout', () => {
+            hoverCtx.clearRect(0, 0, hoverCanvas.width, hoverCanvas.height);
+        });
+
+        hoverCanvas.addEventListener('click', async (e) => {
             if (!username) {
                 alert("Lütfen önce bir kullanıcı adı belirleyin.");
                 return;
@@ -312,7 +336,7 @@
                 return;
             }
 
-            const rect = canvas.getBoundingClientRect();
+            const rect = hoverCanvas.getBoundingClientRect();
             const x = Math.floor(e.clientX - rect.left);
             const y = Math.floor(e.clientY - rect.top);
 
@@ -333,15 +357,11 @@
         // --- GERÇEK ZAMANLI GÜNCELLEMELER ---
         function subscribeToChanges() {
             supabaseClient.channel('pixels_changes')
-                .on(
-                    'postgres_changes',
-                    { event: '*', schema: 'public', table: 'pixels' },
-                    (payload) => {
-                        console.log('Yeni piksel geldi:', payload.new);
-                        const { x, y, color } = payload.new;
-                        drawPixel(x, y, color);
-                    }
-                )
+                .on('postgres_changes', { event: '*', schema: 'public', table: 'pixels' }, (payload) => {
+                    console.log('Yeni piksel geldi:', payload.new);
+                    const { x, y, color } = payload.new;
+                    drawPixel(x, y, color);
+                })
                 .subscribe();
         }
 
@@ -352,7 +372,7 @@
             subscribeToChanges();
             checkCooldown();
         }
-
+        
         // Uygulamayı başlat
         handleUsername();
     </script>
