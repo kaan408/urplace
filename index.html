@@ -17,15 +17,15 @@
             flex-direction: column;
         }
 
-        /* YENİ: KAYDIRMA VE YAKINLAŞTIRMA İÇİN GÖRÜNTÜ ALANI */
+        /* KAYDIRMA VE YAKINLAŞTIRMA İÇİN GÖRÜNTÜ ALANI */
         #canvas-viewport {
-            flex-grow: 1; /* Kontrol paneli hariç tüm alanı kapla */
+            flex-grow: 1;
             width: 100%;
-            overflow: hidden; /* Dışarı taşan tuvali gizle */
-            cursor: grab; /* Kaydırma imleci */
+            overflow: hidden;
+            cursor: grab;
         }
         #canvas-viewport:active {
-            cursor: grabbing; /* Tıklanırkenki kaydırma imleci */
+            cursor: grabbing;
         }
         
         .canvas-wrapper {
@@ -49,9 +49,9 @@
         
         #hover-canvas {
             background-color: transparent;
-            cursor: crosshair;
+            /* cursor: crosshair; */ /* Artık viewport'tan yönetiliyor */
             z-index: 1; 
-            pointer-events: none; /* Tıklamaların alttaki panzoom'a gitmesini engelleme */
+            pointer-events: none; /* Önemli: Fare olaylarının viewport'a gitmesini sağlar */
         }
 
         /* KONTROL PANELİ */
@@ -62,7 +62,7 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            flex-shrink: 0; /* Küçülmesini engelle */
+            flex-shrink: 0;
             z-index: 10;
         }
 
@@ -71,7 +71,7 @@
             margin: 0 15px;
         }
 
-        /* YENİ: RENK SEÇİCİ STİLİ */
+        /* RENK SEÇİCİ STİLİ */
         #color-picker-container {
             display: flex;
             align-items: center;
@@ -83,29 +83,30 @@
             border: 1px solid #ccc;
             border-radius: 5px;
             cursor: pointer;
+            padding: 0; /* İç boşluğu kaldır */
         }
         #color-picker-label {
             font-weight: bold;
         }
 
-        /* YENİ: BİLGİ KUTUCUĞU (TOOLTIP) */
+        /* BİLGİ KUTUCUĞU (TOOLTIP) */
         #tooltip {
-            position: fixed; /* Ekrana göre konumlan */
+            position: fixed;
             display: none;
             background-color: rgba(0, 0, 0, 0.8);
             color: white;
             padding: 8px 12px;
             border-radius: 5px;
             font-size: 0.9em;
-            pointer-events: none; /* Farenin tooltip'i algılamasını engelle */
+            pointer-events: none;
             z-index: 1001;
+            white-space: nowrap; /* İçeriğin alt satıra kaymasını engelle */
         }
 
         /* MODAL (KULLANICI GİRİŞİ) */
-        .modal-overlay { /* ... Bu stil aynı kaldı ... */ }
-        .modal-content { /* ... Bu stil aynı kaldı ... */ }
-        #username-input, #save-username-btn { /* ... Bu stil aynı kaldı ... */ }
-        .modal-overlay{position:fixed;top:0;left:0;width:100%;height:100%;background-color:rgba(0,0,0,.7);display:flex;justify-content:center;align-items:center;z-index:1000}.modal-content{background-color:#fff;padding:30px;border-radius:10px;text-align:center}#username-input,#save-username-btn{font-size:1em;padding:10px;border-radius:5px}
+        .modal-overlay{position:fixed;top:0;left:0;width:100%;height:100%;background-color:rgba(0,0,0,.7);display:flex;justify-content:center;align-items:center;z-index:1000}
+        .modal-content{background-color:#fff;padding:30px;border-radius:10px;text-align:center}
+        #username-input,#save-username-btn{font-size:1em;padding:10px;border-radius:5px}
     </style>
 </head>
 <body>
@@ -119,7 +120,6 @@
         </div>
     </div>
 
-    <!-- YENİ: Pan/Zoom için Görüntü Alanı -->
     <div id="canvas-viewport">
         <div class="canvas-wrapper">
             <canvas id="main-canvas" width="1920" height="1080"></canvas>
@@ -127,14 +127,12 @@
         </div>
     </div>
     
-    <!-- YENİ: Bilgi Kutucuğu -->
     <div id="tooltip"></div>
 
     <div class="controls">
         <div class="user-info">
             Kullanıcı: <strong id="username-display">...</strong>
         </div>
-        <!-- YENİ: Renk Seçici -->
         <div id="color-picker-container">
             <label for="color-picker" id="color-picker-label">Renk Seç:</label>
             <input type="color" id="color-picker" value="#FF0000">
@@ -144,10 +142,11 @@
         </div>
     </div>
 
-    <!-- YENİ: Panzoom Kütüphanesi -->
+    <!-- Gerekli Kütüphaneler -->
     <script src="https://cdn.jsdelivr.net/npm/@panzoom/panzoom@4.5.1/dist/panzoom.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     
+    <!-- Ana Uygulama Kodu (Tek ve Doğru Blok) -->
     <script>
         // --- SUPABASE AYARLARI ---
         const SUPABASE_URL = 'https://mruogrrmbhehharznuru.supabase.co';
@@ -167,6 +166,8 @@
         const usernameModal = document.getElementById('username-modal');
         const usernameInput = document.getElementById('username-input');
         const saveUsernameBtn = document.getElementById('save-username-btn');
+        const viewport = document.getElementById('canvas-viewport');
+        const canvasWrapper = document.querySelector('.canvas-wrapper');
 
         const PIXEL_SIZE = 10;
         const GRID_WIDTH = canvas.width / PIXEL_SIZE;
@@ -176,155 +177,27 @@
         let username = '';
         const COOLDOWN_SECONDS = 60;
         
-        // YENİ: Pan/Zoom ve Tooltip için değişkenler
-        const viewport = document.getElementById('canvas-viewport');
-        const canvasWrapper = document.querySelector('.canvas-wrapper');
         let panzoomInstance;
-        const pixelDataMap = new Map(); // Piksel verilerini yerel olarak saklamak için
+        const pixelDataMap = new Map();
 
-        // --- RENK SEÇİCİ KURULUMU ---
+        // --- KURULUM FONKSİYONLARI ---
         function setupColorPicker() {
             colorPicker.addEventListener('input', (e) => {
                 selectedColor = e.target.value;
             });
         }
         
-        // --- PAN/ZOOM KURULUMU ---
         function setupPanzoom() {
             panzoomInstance = Panzoom(canvasWrapper, {
                 maxScale: 15,
                 minScale: 0.2,
-                canvas: true, // Daha iyi performans için
+                canvas: true,
                 step: 0.1
             });
-            // Fare tekerleği ile zoom yapma
             viewport.addEventListener('wheel', panzoomInstance.zoomWithWheel);
         }
 
         // --- KULLANICI İSMİ YÖNETİMİ ---
-        function handleUsername() { /* ... Bu fonksiyon aynı kaldı ... */ }
-        saveUsernameBtn.addEventListener('click', () => { /* ... Bu fonksiyon aynı kaldı ... */ });
-        handleUsername.toString = () => "/* ... Bu fonksiyon aynı kaldı ... */"; saveUsernameBtn.addEventListener.toString = () => "/* ... Bu fonksiyon aynı kaldı ... */";
-        
-        // --- TUVAL VE TABLO ÇİZİMİ ---
-        function drawGridCell(gridX, gridY, color) { /* ... Bu fonksiyon aynı kaldı ... */ }
-        function drawInitialGrid() { /* ... Bu fonksiyon aynı kaldı ... */ }
-        drawGridCell.toString = () => "/* ... Bu fonksiyon aynı kaldı ... */"; drawInitialGrid.toString = () => "/* ... Bu fonksiyon aynı kaldı ... */";
-
-        async function fetchInitialCanvas() {
-            console.log("Mevcut pikseller çekiliyor...");
-            pixelDataMap.clear(); // Haritayı temizle
-            const { data, error } = await supabaseClient.from('pixels').select('*');
-            if (error) {
-                console.error("Pikselleri çekerken hata:", error);
-            } else {
-                data.forEach(pixel => {
-                    drawGridCell(pixel.x, pixel.y, pixel.color);
-                    // YENİ: Piksel verisini yerel haritaya kaydet
-                    const key = `${pixel.x},${pixel.y}`;
-                    pixelDataMap.set(key, { username: pixel.username, color: pixel.color });
-                });
-                console.log(`${data.length} piksel yüklendi.`);
-            }
-        }
-        
-        // --- ZAMANLAYICI ---
-        let cooldownInterval;
-        function startCooldownTimer() { /* ... Bu fonksiyon aynı kaldı ... */ }
-        function checkCooldown() { /* ... Bu fonksiyon aynı kaldı ... */ }
-        function startCooldownTimerFrom(startTime) { /* ... Bu fonksiyon aynı kaldı ... */ }
-        startCooldownTimer.toString = () => "/* ... Bu fonksiyon aynı kaldı ... */"; checkCooldown.toString = () => "/* ... Bu fonksiyon aynı kaldı ... */"; startCooldownTimerFrom.toString = () => "/* ... Bu fonksiyon aynı kaldı ... */";
-        
-        // --- OLAY DİNLEYİCİLERİ (Pan/Zoom ile uyumlu hale getirildi) ---
-        function getGridCoordinatesFromEvent(e) {
-            const { scale, x: translateX, y: translateY } = panzoomInstance.getTransform();
-            const rect = viewport.getBoundingClientRect();
-            const screenX = e.clientX - rect.left;
-            const screenY = e.clientY - rect.top;
-            
-            const canvasX = (screenX - translateX) / scale;
-            const canvasY = (screenY - translateY) / scale;
-            
-            const gridX = Math.floor(canvasX / PIXEL_SIZE);
-            const gridY = Math.floor(canvasY / PIXEL_SIZE);
-
-            if (gridX >= 0 && gridX < GRID_WIDTH && gridY >= 0 && gridY < GRID_HEIGHT) {
-                return { gridX, gridY };
-            }
-            return null; // Tuvalin dışındaysa null döndür
-        }
-
-        viewport.addEventListener('mousemove', (e) => {
-            const coords = getGridCoordinatesFromEvent(e);
-            hoverCtx.clearRect(0, 0, hoverCanvas.width, hoverCanvas.height);
-            tooltip.style.display = 'none';
-
-            if (coords) {
-                // Önizleme karesini çiz
-                hoverCtx.fillStyle = selectedColor;
-                hoverCtx.fillRect(coords.gridX * PIXEL_SIZE, coords.gridY * PIXEL_SIZE, PIXEL_SIZE, PIXEL_SIZE);
-                
-                // Tooltip'i güncelle ve göster
-                const key = `${coords.gridX},${coords.gridY}`;
-                if (pixelDataMap.has(key)) {
-                    const data = pixelDataMap.get(key);
-                    tooltip.innerHTML = `(${coords.gridX}, ${coords.gridY})<br>Yapan: ${data.username}<br>Renk: ${data.color}`;
-                    tooltip.style.left = `${e.clientX + 15}px`;
-                    tooltip.style.top = `${e.clientY + 15}px`;
-                    tooltip.style.display = 'block';
-                }
-            }
-        });
-
-        viewport.addEventListener('click', async (e) => {
-            if (!username || !checkCooldown()) return;
-            
-            const coords = getGridCoordinatesFromEvent(e);
-            if (!coords) return; // Tuval dışına tıklanırsa işlem yapma
-
-            drawGridCell(coords.gridX, coords.gridY, selectedColor);
-            const key = `${coords.gridX},${coords.gridY}`;
-            pixelDataMap.set(key, { username: username, color: selectedColor });
-
-            const { error } = await supabaseClient
-                .from('pixels')
-                .upsert({ x: coords.gridX, y: coords.gridY, color: selectedColor, username: username }, { onConflict: 'x,y' });
-
-            if (error) {
-                console.error("Piksel gönderilemedi:", error);
-                pixelDataMap.delete(key); // Hata olursa yerel değişikliği geri al
-            } else {
-                startCooldownTimer();
-            }
-        });
-
-        // --- GERÇEK ZAMANLI GÜNCELLEMELER ---
-        function subscribeToChanges() {
-            supabaseClient.channel('pixels_changes')
-                .on('postgres_changes', { event: '*', schema: 'public', table: 'pixels' }, (payload) => {
-                    const { x, y, color, username } = payload.new;
-                    drawGridCell(x, y, color);
-                    // YENİ: Yerel haritayı da güncelle
-                    const key = `${x},${y}`;
-                    pixelDataMap.set(key, { username: username, color: color });
-                })
-                .subscribe();
-        }
-
-        // --- BAŞLANGIÇ FONKSİYONU ---
-        function init() {
-            setupColorPicker();
-            setupPanzoom();
-            drawInitialGrid();
-            fetchInitialCanvas();
-            subscribeToChanges();
-            checkCooldown();
-        }
-        
-        handleUsername();
-    </script>
-    <!-- Değişmeyen fonksiyonların tam hali (JavaScript hatası olmaması için) -->
-    <script>
         function handleUsername() {
             const savedUsername = localStorage.getItem('global_canvas_username');
             if (savedUsername) {
@@ -346,6 +219,8 @@
                 init(); 
             }
         });
+        
+        // --- TUVAL VE TABLO ÇİZİMİ ---
         function drawGridCell(gridX, gridY, color) {
             ctx.fillStyle = color;
             ctx.fillRect(gridX * PIXEL_SIZE, gridY * PIXEL_SIZE, PIXEL_SIZE, PIXEL_SIZE);
@@ -356,24 +231,42 @@
                 for (let y = 0; y < GRID_HEIGHT; y++) {
                     ctx.fillStyle = '#FFFFFF';
                     ctx.fillRect(x * PIXEL_SIZE, y * PIXEL_SIZE, PIXEL_SIZE, PIXEL_SIZE);
-                    ctx.strokeStyle = '#E0E0E0';
+                    ctx.strokeStyle = '#E0E OLOR="WHITE">';
                     ctx.strokeRect(x * PIXEL_SIZE, y * PIXEL_SIZE, PIXEL_SIZE, PIXEL_SIZE);
                 }
             }
         }
+
+        async function fetchInitialCanvas() {
+            console.log("Mevcut pikseller çekiliyor...");
+            pixelDataMap.clear();
+            const { data, error } = await supabaseClient.from('pixels').select('*');
+            if (error) {
+                console.error("Pikselleri çekerken hata:", error);
+            } else {
+                data.forEach(pixel => {
+                    drawGridCell(pixel.x, pixel.y, pixel.color);
+                    const key = `${pixel.x},${pixel.y}`;
+                    pixelDataMap.set(key, { username: pixel.username, color: pixel.color });
+                });
+                console.log(`${data.length} piksel yüklendi.`);
+            }
+        }
+        
+        // --- ZAMANLAYICI ---
         let cooldownInterval;
         function startCooldownTimer() {
             let timeLeft = COOLDOWN_SECONDS;
             localStorage.setItem('last_pixel_time', Date.now());
             timerDisplay.textContent = `${timeLeft}s`;
-            hoverCanvas.style.cursor = 'not-allowed';
+            viewport.style.cursor = 'not-allowed';
             cooldownInterval = setInterval(() => {
                 timeLeft--;
                 timerDisplay.textContent = `${timeLeft}s`;
                 if (timeLeft <= 0) {
                     clearInterval(cooldownInterval);
                     timerDisplay.textContent = 'Hazır!';
-                    hoverCanvas.style.cursor = 'crosshair';
+                    viewport.style.cursor = 'grab';
                 }
             }, 1000);
         }
@@ -393,17 +286,104 @@
             clearInterval(cooldownInterval);
             let timeLeft = startTime;
             timerDisplay.textContent = `${timeLeft}s`;
-            hoverCanvas.style.cursor = 'not-allowed';
+            viewport.style.cursor = 'not-allowed';
             cooldownInterval = setInterval(() => {
                 timeLeft--;
                 timerDisplay.textContent = `${timeLeft}s`;
                 if (timeLeft <= 0) {
                     clearInterval(cooldownInterval);
                     timerDisplay.textContent = 'Hazır!';
-                    hoverCanvas.style.cursor = 'crosshair';
+                    viewport.style.cursor = 'grab';
                 }
             }, 1000);
         }
+        
+        // --- OLAY DİNLEYİCİLERİ ---
+        function getGridCoordinatesFromEvent(e) {
+            if (!panzoomInstance) return null;
+            const { scale, x: translateX, y: translateY } = panzoomInstance.getTransform();
+            const rect = viewport.getBoundingClientRect();
+            const screenX = e.clientX - rect.left;
+            const screenY = e.clientY - rect.top;
+            
+            const canvasX = (screenX - translateX) / scale;
+            const canvasY = (screenY - translateY) / scale;
+            
+            const gridX = Math.floor(canvasX / PIXEL_SIZE);
+            const gridY = Math.floor(canvasY / PIXEL_SIZE);
+
+            if (gridX >= 0 && gridX < GRID_WIDTH && gridY >= 0 && gridY < GRID_HEIGHT) {
+                return { gridX, gridY };
+            }
+            return null;
+        }
+
+        viewport.addEventListener('mousemove', (e) => {
+            const coords = getGridCoordinatesFromEvent(e);
+            hoverCtx.clearRect(0, 0, hoverCanvas.width, hoverCanvas.height);
+            tooltip.style.display = 'none';
+
+            if (coords) {
+                hoverCtx.fillStyle = selectedColor;
+                hoverCtx.fillRect(coords.gridX * PIXEL_SIZE, coords.gridY * PIXEL_SIZE, PIXEL_SIZE, PIXEL_SIZE);
+                
+                const key = `${coords.gridX},${coords.gridY}`;
+                if (pixelDataMap.has(key)) {
+                    const data = pixelDataMap.get(key);
+                    tooltip.innerHTML = `(${coords.gridX}, ${coords.gridY})<br>Yapan: ${data.username}<br>Renk: ${data.color}`;
+                    tooltip.style.left = `${e.clientX + 15}px`;
+                    tooltip.style.top = `${e.clientY + 15}px`;
+                    tooltip.style.display = 'block';
+                }
+            }
+        });
+
+        viewport.addEventListener('click', async (e) => {
+            if (!username) { alert("Lütfen önce bir kullanıcı adı belirleyin."); return; }
+            if (!checkCooldown()) { alert("Lütfen bir sonraki piksel için bekleyin."); return; }
+            
+            const coords = getGridCoordinatesFromEvent(e);
+            if (!coords) return;
+
+            drawGridCell(coords.gridX, coords.gridY, selectedColor);
+            const key = `${coords.gridX},${coords.gridY}`;
+            pixelDataMap.set(key, { username: username, color: selectedColor });
+
+            const { error } = await supabaseClient
+                .from('pixels')
+                .upsert({ x: coords.gridX, y: coords.gridY, color: selectedColor, username: username }, { onConflict: 'x,y' });
+
+            if (error) {
+                console.error("Piksel gönderilemedi:", error);
+                pixelDataMap.delete(key);
+            } else {
+                startCooldownTimer();
+            }
+        });
+
+        // --- GERÇEK ZAMANLI GÜNCELLEMELER ---
+        function subscribeToChanges() {
+            supabaseClient.channel('pixels_changes')
+                .on('postgres_changes', { event: '*', schema: 'public', table: 'pixels' }, (payload) => {
+                    const { x, y, color, username } = payload.new;
+                    drawGridCell(x, y, color);
+                    const key = `${x},${y}`;
+                    pixelDataMap.set(key, { username: username, color: color });
+                })
+                .subscribe();
+        }
+
+        // --- BAŞLANGIÇ FONKSİYONU ---
+        function init() {
+            setupColorPicker();
+            setupPanzoom();
+            drawInitialGrid();
+            fetchInitialCanvas();
+            subscribeToChanges();
+            checkCooldown();
+        }
+        
+        handleUsername();
     </script>
 </body>
 </html>
