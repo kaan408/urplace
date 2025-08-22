@@ -17,15 +17,16 @@
             flex-direction: column;
         }
 
-        /* KAYDIRMA VE YAKINLAŞTIRMA İÇİN GÖRÜNTÜ ALANI */
-        #canvas-viewport {
+        /* Tuvali ve başlığı ortalamak için ana içerik alanı */
+        .main-content {
             flex-grow: 1;
-            width: 100%;
-            overflow: hidden;
-            cursor: grab;
-        }
-        #canvas-viewport:active {
-            cursor: grabbing;
+            display: flex;
+            flex-direction: column;
+            justify-content: center; 
+            align-items: center; 
+            padding: 20px;
+            box-sizing: border-box;
+            overflow: auto; /* Tuval ekrana sığmazsa kaydırma çubukları çıksın */
         }
         
         .canvas-wrapper {
@@ -49,9 +50,8 @@
         
         #hover-canvas {
             background-color: transparent;
-            /* cursor: crosshair; */ /* Artık viewport'tan yönetiliyor */
+            cursor: crosshair; /* İmleç artık doğrudan buradan yönetiliyor */
             z-index: 1; 
-            pointer-events: none; /* Önemli: Fare olaylarının viewport'a gitmesini sağlar */
         }
 
         /* KONTROL PANELİ */
@@ -83,7 +83,7 @@
             border: 1px solid #ccc;
             border-radius: 5px;
             cursor: pointer;
-            padding: 0; /* İç boşluğu kaldır */
+            padding: 0;
         }
         #color-picker-label {
             font-weight: bold;
@@ -100,7 +100,7 @@
             font-size: 0.9em;
             pointer-events: none;
             z-index: 1001;
-            white-space: nowrap; /* İçeriğin alt satıra kaymasını engelle */
+            white-space: nowrap;
         }
 
         /* MODAL (KULLANICI GİRİŞİ) */
@@ -120,12 +120,13 @@
         </div>
     </div>
 
-    <div id="canvas-viewport">
+    <main class="main-content">
+        <h1>Global Tuval</h1>
         <div class="canvas-wrapper">
             <canvas id="main-canvas" width="1920" height="1080"></canvas>
             <canvas id="hover-canvas" width="1920" height="1080"></canvas>
         </div>
-    </div>
+    </main>
     
     <div id="tooltip"></div>
 
@@ -143,10 +144,9 @@
     </div>
 
     <!-- Gerekli Kütüphaneler -->
-    <script src="https://cdn.jsdelivr.net/npm/@panzoom/panzoom@4.5.1/dist/panzoom.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     
-    <!-- Ana Uygulama Kodu (Tek ve Doğru Blok) -->
+    <!-- Ana Uygulama Kodu -->
     <script>
         // --- SUPABASE AYARLARI ---
         const SUPABASE_URL = 'https://mruogrrmbhehharznuru.supabase.co';
@@ -166,8 +166,6 @@
         const usernameModal = document.getElementById('username-modal');
         const usernameInput = document.getElementById('username-input');
         const saveUsernameBtn = document.getElementById('save-username-btn');
-        const viewport = document.getElementById('canvas-viewport');
-        const canvasWrapper = document.querySelector('.canvas-wrapper');
 
         const PIXEL_SIZE = 10;
         const GRID_WIDTH = canvas.width / PIXEL_SIZE;
@@ -177,7 +175,6 @@
         let username = '';
         const COOLDOWN_SECONDS = 60;
         
-        let panzoomInstance;
         const pixelDataMap = new Map();
 
         // --- KURULUM FONKSİYONLARI ---
@@ -187,16 +184,6 @@
             });
         }
         
-        function setupPanzoom() {
-            panzoomInstance = Panzoom(canvasWrapper, {
-                maxScale: 15,
-                minScale: 0.2,
-                canvas: true,
-                step: 0.1
-            });
-            viewport.addEventListener('wheel', panzoomInstance.zoomWithWheel);
-        }
-
         // --- KULLANICI İSMİ YÖNETİMİ ---
         function handleUsername() {
             const savedUsername = localStorage.getItem('global_canvas_username');
@@ -231,7 +218,7 @@
                 for (let y = 0; y < GRID_HEIGHT; y++) {
                     ctx.fillStyle = '#FFFFFF';
                     ctx.fillRect(x * PIXEL_SIZE, y * PIXEL_SIZE, PIXEL_SIZE, PIXEL_SIZE);
-                    ctx.strokeStyle = '#E0E OLOR="WHITE">';
+                    ctx.strokeStyle = '#E0E0E0';
                     ctx.strokeRect(x * PIXEL_SIZE, y * PIXEL_SIZE, PIXEL_SIZE, PIXEL_SIZE);
                 }
             }
@@ -259,14 +246,14 @@
             let timeLeft = COOLDOWN_SECONDS;
             localStorage.setItem('last_pixel_time', Date.now());
             timerDisplay.textContent = `${timeLeft}s`;
-            viewport.style.cursor = 'not-allowed';
+            hoverCanvas.style.cursor = 'not-allowed';
             cooldownInterval = setInterval(() => {
                 timeLeft--;
                 timerDisplay.textContent = `${timeLeft}s`;
                 if (timeLeft <= 0) {
                     clearInterval(cooldownInterval);
                     timerDisplay.textContent = 'Hazır!';
-                    viewport.style.cursor = 'grab';
+                    hoverCanvas.style.cursor = 'crosshair';
                 }
             }, 1000);
         }
@@ -286,51 +273,37 @@
             clearInterval(cooldownInterval);
             let timeLeft = startTime;
             timerDisplay.textContent = `${timeLeft}s`;
-            viewport.style.cursor = 'not-allowed';
+            hoverCanvas.style.cursor = 'not-allowed';
             cooldownInterval = setInterval(() => {
                 timeLeft--;
                 timerDisplay.textContent = `${timeLeft}s`;
                 if (timeLeft <= 0) {
                     clearInterval(cooldownInterval);
                     timerDisplay.textContent = 'Hazır!';
-                    viewport.style.cursor = 'grab';
+                    hoverCanvas.style.cursor = 'crosshair';
                 }
             }, 1000);
         }
         
         // --- OLAY DİNLEYİCİLERİ ---
-        function getGridCoordinatesFromEvent(e) {
-            if (!panzoomInstance) return null;
-            const { scale, x: translateX, y: translateY } = panzoomInstance.getTransform();
-            const rect = viewport.getBoundingClientRect();
+        hoverCanvas.addEventListener('mousemove', (e) => {
+            const rect = hoverCanvas.getBoundingClientRect();
             const screenX = e.clientX - rect.left;
             const screenY = e.clientY - rect.top;
-            
-            const canvasX = (screenX - translateX) / scale;
-            const canvasY = (screenY - translateY) / scale;
-            
-            const gridX = Math.floor(canvasX / PIXEL_SIZE);
-            const gridY = Math.floor(canvasY / PIXEL_SIZE);
+            const gridX = Math.floor(screenX / PIXEL_SIZE);
+            const gridY = Math.floor(screenY / PIXEL_SIZE);
 
-            if (gridX >= 0 && gridX < GRID_WIDTH && gridY >= 0 && gridY < GRID_HEIGHT) {
-                return { gridX, gridY };
-            }
-            return null;
-        }
-
-        viewport.addEventListener('mousemove', (e) => {
-            const coords = getGridCoordinatesFromEvent(e);
             hoverCtx.clearRect(0, 0, hoverCanvas.width, hoverCanvas.height);
             tooltip.style.display = 'none';
 
-            if (coords) {
+            if (gridX >= 0 && gridX < GRID_WIDTH && gridY >= 0 && gridY < GRID_HEIGHT) {
                 hoverCtx.fillStyle = selectedColor;
-                hoverCtx.fillRect(coords.gridX * PIXEL_SIZE, coords.gridY * PIXEL_SIZE, PIXEL_SIZE, PIXEL_SIZE);
+                hoverCtx.fillRect(gridX * PIXEL_SIZE, gridY * PIXEL_SIZE, PIXEL_SIZE, PIXEL_SIZE);
                 
-                const key = `${coords.gridX},${coords.gridY}`;
+                const key = `${gridX},${gridY}`;
                 if (pixelDataMap.has(key)) {
                     const data = pixelDataMap.get(key);
-                    tooltip.innerHTML = `(${coords.gridX}, ${coords.gridY})<br>Yapan: ${data.username}<br>Renk: ${data.color}`;
+                    tooltip.innerHTML = `(${gridX}, ${gridY})<br>Yapan: ${data.username}<br>Renk: ${data.color}`;
                     tooltip.style.left = `${e.clientX + 15}px`;
                     tooltip.style.top = `${e.clientY + 15}px`;
                     tooltip.style.display = 'block';
@@ -338,20 +311,30 @@
             }
         });
 
-        viewport.addEventListener('click', async (e) => {
+        hoverCanvas.addEventListener('mouseout', () => {
+            hoverCtx.clearRect(0, 0, hoverCanvas.width, hoverCanvas.height);
+            tooltip.style.display = 'none';
+        });
+
+        hoverCanvas.addEventListener('click', async (e) => {
             if (!username) { alert("Lütfen önce bir kullanıcı adı belirleyin."); return; }
             if (!checkCooldown()) { alert("Lütfen bir sonraki piksel için bekleyin."); return; }
             
-            const coords = getGridCoordinatesFromEvent(e);
-            if (!coords) return;
+            const rect = hoverCanvas.getBoundingClientRect();
+            const screenX = e.clientX - rect.left;
+            const screenY = e.clientY - rect.top;
+            const gridX = Math.floor(screenX / PIXEL_SIZE);
+            const gridY = Math.floor(screenY / PIXEL_SIZE);
 
-            drawGridCell(coords.gridX, coords.gridY, selectedColor);
-            const key = `${coords.gridX},${coords.gridY}`;
+            if (gridX < 0 || gridX >= GRID_WIDTH || gridY < 0 || gridY >= GRID_HEIGHT) return;
+
+            drawGridCell(gridX, gridY, selectedColor);
+            const key = `${gridX},${gridY}`;
             pixelDataMap.set(key, { username: username, color: selectedColor });
 
             const { error } = await supabaseClient
                 .from('pixels')
-                .upsert({ x: coords.gridX, y: coords.gridY, color: selectedColor, username: username }, { onConflict: 'x,y' });
+                .upsert({ x: gridX, y: gridY, color: selectedColor, username: username }, { onConflict: 'x,y' });
 
             if (error) {
                 console.error("Piksel gönderilemedi:", error);
@@ -376,7 +359,6 @@
         // --- BAŞLANGIÇ FONKSİYONU ---
         function init() {
             setupColorPicker();
-            setupPanzoom();
             drawInitialGrid();
             fetchInitialCanvas();
             subscribeToChanges();
