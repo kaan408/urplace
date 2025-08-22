@@ -1,343 +1,193 @@
-<!DOCTYPE html>
-<html lang="tr">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Global Tuval Projesi</title>
+// --- SUPABASE AYARLARI ---
+// ADIM 4'TE ALDIĞINIZ BİLGİLERİ BURAYA YAPIŞTIRIN!
+const SUPABASE_URL = 'https://mruogrrmbhehharznuru.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1ydW9ncnJtYmhlaGhhcnpudXJ1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTU4MzcwNDUsImV4cCI6MjA3MTQxMzA0NX0.q6s8w-xty1NWiPEDJrnsVV-7I-SNrz0qdENsuPjLhBk';
 
-    <!-- ================== CSS KODLARI BURADA ================== -->
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            background-color: #f0f2f5;
-            margin: 0;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            overflow: hidden; /* Sayfanın kaymasını engelle */
-        }
+const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-        .container {
-            text-align: center;
-            width: 1920px; /* Canvas ile aynı genişlikte */
-            margin-top: 20px;
-        }
+// --- GLOBAL DEĞİŞKENLER ---
+const canvas = document.getElementById('main-canvas');
+const ctx = canvas.getContext('2d');
+const colorPalette = document.getElementById('color-palette');
+const timerDisplay = document.getElementById('timer-display');
+const usernameDisplay = document.getElementById('username-display');
+const usernameModal = document.getElementById('username-modal');
+const usernameInput = document.getElementById('username-input');
+const saveUsernameBtn = document.getElementById('save-username-btn');
 
-        h1 {
-            color: #333;
-        }
+let selectedColor = '#000000';
+let username = '';
+const COOLDOWN_SECONDS = 60; // 1 dakika
 
-        canvas {
-            border: 2px solid #333;
-            background-color: #ffffff;
-            cursor: crosshair;
-        }
+const COLORS = [
+    '#FF0000', '#00FF00', '#0000FF', '#FFFF00', '#FF00FF', '#00FFFF', 
+    '#000000', '#FFFFFF', '#808080', '#FFA500', '#800080', '#A52A2A'
+];
 
-        .controls {
-            position: fixed;
-            bottom: 0;
-            left: 0;
-            width: 100%;
-            background-color: #fff;
-            border-top: 1px solid #ccc;
-            padding: 10px 20px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            box-sizing: border-box;
-        }
+// --- KULLANICI İSMİ YÖNETİMİ ---
+function handleUsername() {
+    const savedUsername = localStorage.getItem('global_canvas_username');
+    if (savedUsername) {
+        username = savedUsername;
+        usernameDisplay.textContent = username;
+        usernameModal.style.display = 'none';
+        init(); // Kullanıcı adı varsa uygulamayı başlat
+    } else {
+        usernameModal.style.display = 'flex';
+    }
+}
 
-        .user-info, .timer-info {
-            font-size: 1.1em;
-        }
+saveUsernameBtn.addEventListener('click', () => {
+    const name = usernameInput.value.trim();
+    if (name) {
+        username = name;
+        localStorage.setItem('global_canvas_username', username);
+        usernameDisplay.textContent = username;
+        usernameModal.style.display = 'none';
+        init(); // Kullanıcı adı kaydedilince uygulamayı başlat
+    }
+});
 
-        #color-palette {
-            display: flex;
-            gap: 10px;
-        }
-
-        .color-box {
-            width: 30px;
-            height: 30px;
-            border: 2px solid transparent;
-            border-radius: 5px;
-            cursor: pointer;
-            transition: transform 0.2s;
-        }
-
-        .color-box:hover {
-            transform: scale(1.1);
-        }
-
-        .color-box.selected {
-            border-color: #007bff;
-            transform: scale(1.2);
-        }
-
-        /* Modal Stilleri */
-        .modal-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(0, 0, 0, 0.7);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            z-index: 1000;
-        }
-
-        .modal-content {
-            background-color: white;
-            padding: 30px;
-            border-radius: 10px;
-            text-align: center;
-        }
-
-        #username-input {
-            display: block;
-            margin: 15px auto;
-            padding: 10px;
-            width: 80%;
-        }
-
-        #save-username-btn {
-            padding: 10px 20px;
-            border: none;
-            background-color: #007bff;
-            color: white;
-            border-radius: 5px;
-            cursor: pointer;
-        }
-    </style>
-</head>
-<body>
-    
-    <!-- Kullanıcı adı girişi için modal -->
-    <div id="username-modal" class="modal-overlay">
-        <div class="modal-content">
-            <h2>Hoş Geldin!</h2>
-            <p>Lütfen tuvali kullanmak için bir isim gir.</p>
-            <input type="text" id="username-input" placeholder="İsminiz..." maxlength="15">
-            <button id="save-username-btn">Kaydet ve Başla</button>
-        </div>
-    </div>
-
-    <!-- Ana İçerik -->
-    <div class="container">
-        <h1>Global Tuval</h1>
-        <canvas id="main-canvas" width="1920" height="1080"></canvas>
-    </div>
-
-    <!-- Kontrol Paneli -->
-    <div class="controls">
-        <div class="user-info">
-            Kullanıcı: <strong id="username-display">...</strong>
-        </div>
-        <div id="color-palette">
-            <!-- Renkler JavaScript ile eklenecek -->
-        </div>
-        <div class="timer-info">
-            Kalan Süre: <strong id="timer-display">Hazır!</strong>
-        </div>
-    </div>
-
-    <!-- Supabase Kütüphanesini ekliyoruz (Bu satır önemli!) -->
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    
-    <!-- ================= JAVASCRIPT KODLARI BURADA ================= -->
-    <script>
-        // --- SUPABASE AYARLARI ---
-        // BURAYI KENDİ BİLGİLERİNLE DOLDURMAYI UNUTMA!
-        const SUPABASE_URL = 'SENİN_SUPABASE_URL_İN';
-        const SUPABASE_ANON_KEY = 'SENİN_SUPABASE_ANON_KEY_İN';
-
-        const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-
-        // --- GLOBAL DEĞİŞKENLER ---
-        const canvas = document.getElementById('main-canvas');
-        const ctx = canvas.getContext('2d');
-        const colorPalette = document.getElementById('color-palette');
-        const timerDisplay = document.getElementById('timer-display');
-        const usernameDisplay = document.getElementById('username-display');
-        const usernameModal = document.getElementById('username-modal');
-        const usernameInput = document.getElementById('username-input');
-        const saveUsernameBtn = document.getElementById('save-username-btn');
-
-        let selectedColor = '#000000';
-        let username = '';
-        const COOLDOWN_SECONDS = 60; // 1 dakika
-
-        const COLORS = [
-            '#FF0000', '#00FF00', '#0000FF', '#FFFF00', '#FF00FF', '#00FFFF', 
-            '#000000', '#FFFFFF', '#808080', '#FFA500', '#800080', '#A52A2A'
-        ];
-
-        // --- KULLANICI İSMİ YÖNETİMİ ---
-        function handleUsername() {
-            const savedUsername = localStorage.getItem('global_canvas_username');
-            if (savedUsername) {
-                username = savedUsername;
-                usernameDisplay.textContent = username;
-                usernameModal.style.display = 'none';
-                init(); // Kullanıcı adı varsa uygulamayı başlat
-            } else {
-                usernameModal.style.display = 'flex';
-            }
-        }
-
-        saveUsernameBtn.addEventListener('click', () => {
-            const name = usernameInput.value.trim();
-            if (name) {
-                username = name;
-                localStorage.setItem('global_canvas_username', username);
-                usernameDisplay.textContent = username;
-                usernameModal.style.display = 'none';
-                init(); // Kullanıcı adı kaydedilince uygulamayı başlat
-            }
+// --- RENK PALETİ OLUŞTURMA ---
+function createColorPalette() {
+    COLORS.forEach(color => {
+        const colorBox = document.createElement('div');
+        colorBox.className = 'color-box';
+        colorBox.style.backgroundColor = color;
+        colorBox.dataset.color = color;
+        colorBox.addEventListener('click', () => {
+            selectedColor = color;
+            document.querySelector('.color-box.selected')?.classList.remove('selected');
+            colorBox.classList.add('selected');
         });
+        colorPalette.appendChild(colorBox);
+    });
+    // İlk rengi seçili yap
+    colorPalette.firstChild.classList.add('selected');
+}
 
-        // --- RENK PALETİ OLUŞTURMA ---
-        function createColorPalette() {
-            COLORS.forEach(color => {
-                const colorBox = document.createElement('div');
-                colorBox.className = 'color-box';
-                colorBox.style.backgroundColor = color;
-                colorBox.dataset.color = color;
-                colorBox.addEventListener('click', () => {
-                    selectedColor = color;
-                    document.querySelector('.color-box.selected')?.classList.remove('selected');
-                    colorBox.classList.add('selected');
-                });
-                colorPalette.appendChild(colorBox);
-            });
-            // İlk rengi seçili yap
-            if (colorPalette.firstChild) {
-                colorPalette.firstChild.classList.add('selected');
-            }
-        }
+// --- TUVAL ÇİZİMİ ---
+function drawPixel(x, y, color) {
+    ctx.fillStyle = color;
+    ctx.fillRect(x, y, 1, 1);
+}
 
-        // --- TUVAL ÇİZİMİ ---
-        function drawPixel(x, y, color) {
-            ctx.fillStyle = color;
-            ctx.fillRect(x, y, 1, 1);
-        }
+async function fetchInitialCanvas() {
+    console.log("Mevcut pikseller çekiliyor...");
+    const { data, error } = await supabase.from('pixels').select('*');
+    if (error) {
+        console.error("Pikselleri çekerken hata:", error);
+    } else {
+        data.forEach(pixel => {
+            drawPixel(pixel.x, pixel.y, pixel.color);
+        });
+        console.log(`${data.length} piksel yüklendi.`);
+    }
+}
 
-        async function fetchInitialCanvas() {
-            console.log("Mevcut pikseller çekiliyor...");
-            const { data, error } = await supabase.from('pixels').select('*');
-            if (error) {
-                console.error("Pikselleri çekerken hata:", error);
-            } else {
-                data.forEach(pixel => {
-                    drawPixel(pixel.x, pixel.y, pixel.color);
-                });
-                console.log(`${data.length} piksel yüklendi.`);
-            }
-        }
+// --- ZAMANLAYICI (COOLDOWN) ---
+let cooldownInterval;
+function startCooldownTimer() {
+    let timeLeft = COOLDOWN_SECONDS;
+    localStorage.setItem('last_pixel_time', Date.now());
+    
+    timerDisplay.textContent = `${timeLeft}s`;
+    canvas.style.cursor = 'not-allowed';
 
-        // --- ZAMANLAYICI (COOLDOWN) ---
-        let cooldownInterval;
-        function startCooldownTimer() {
-            let timeLeft = COOLDOWN_SECONDS;
-            localStorage.setItem('last_pixel_time', Date.now());
-            
-            timerDisplay.textContent = `${timeLeft}s`;
-            canvas.style.cursor = 'not-allowed';
-
-            cooldownInterval = setInterval(() => {
-                timeLeft--;
-                timerDisplay.textContent = `${timeLeft}s`;
-                if (timeLeft <= 0) {
-                    clearInterval(cooldownInterval);
-                    timerDisplay.textContent = 'Hazır!';
-                    canvas.style.cursor = 'crosshair';
-                }
-            }, 1000);
-        }
-
-        function checkCooldown() {
-            const lastPixelTime = localStorage.getItem('last_pixel_time');
-            if (!lastPixelTime) return true; // Daha önce piksel koymamış
-
-            const secondsPassed = (Date.now() - parseInt(lastPixelTime)) / 1000;
-            if (secondsPassed >= COOLDOWN_SECONDS) {
-                return true;
-            } else {
-                const remaining = Math.ceil(COOLDOWN_SECONDS - secondsPassed);
-                startCooldownTimerFrom(remaining);
-                return false;
-            }
-        }
-
-        function startCooldownTimerFrom(startTime) {
+    cooldownInterval = setInterval(() => {
+        timeLeft--;
+        timerDisplay.textContent = `${timeLeft}s`;
+        if (timeLeft <= 0) {
             clearInterval(cooldownInterval);
-            let timeLeft = startTime;
-            timerDisplay.textContent = `${timeLeft}s`;
-            canvas.style.cursor = 'not-allowed';
-
-            cooldownInterval = setInterval(() => {
-                timeLeft--;
-                timerDisplay.textContent = `${timeLeft}s`;
-                if (timeLeft <= 0) {
-                    clearInterval(cooldownInterval);
-                    timerDisplay.textContent = 'Hazır!';
-                    canvas.style.cursor = 'crosshair';
-                }
-            }, 1000);
+            timerDisplay.textContent = 'Hazır!';
+            canvas.style.cursor = 'crosshair';
         }
+    }, 1000);
+}
 
-        // --- OLAY DİNLEYİCİLERİ ---
-        canvas.addEventListener('click', async (e) => {
-            if (!checkCooldown()) {
-                alert("Lütfen bir sonraki piksel için bekleyin.");
-                return;
+function checkCooldown() {
+    const lastPixelTime = localStorage.getItem('last_pixel_time');
+    if (!lastPixelTime) return true; // Daha önce piksel koymamış
+
+    const secondsPassed = (Date.now() - parseInt(lastPixelTime)) / 1000;
+    if (secondsPassed >= COOLDOWN_SECONDS) {
+        return true;
+    } else {
+        // Sayfa yenilendiyse zamanlayıcıyı devam ettir
+        const remaining = Math.ceil(COOLDOWN_SECONDS - secondsPassed);
+        startCooldownTimerFrom(remaining);
+        return false;
+    }
+}
+
+function startCooldownTimerFrom(startTime) {
+    clearInterval(cooldownInterval); // Önceki interval'i temizle
+    let timeLeft = startTime;
+    timerDisplay.textContent = `${timeLeft}s`;
+    canvas.style.cursor = 'not-allowed';
+
+    cooldownInterval = setInterval(() => {
+        timeLeft--;
+        timerDisplay.textContent = `${timeLeft}s`;
+        if (timeLeft <= 0) {
+            clearInterval(cooldownInterval);
+            timerDisplay.textContent = 'Hazır!';
+            canvas.style.cursor = 'crosshair';
+        }
+    }, 1000);
+}
+
+// --- OLAY DİNLEYİCİLERİ ---
+canvas.addEventListener('click', async (e) => {
+    if (!checkCooldown()) {
+        alert("Lütfen bir sonraki piksel için bekleyin.");
+        return;
+    }
+
+    const rect = canvas.getBoundingClientRect();
+    const x = Math.floor(e.clientX - rect.left);
+    const y = Math.floor(e.clientY - rect.top);
+
+    // 1. Önce yerel olarak çiz (anında geri bildirim için)
+    drawPixel(x, y, selectedColor);
+
+    // 2. Supabase'e gönder
+    const { error } = await supabase
+        .from('pixels')
+        .upsert({ x, y, color: selectedColor, username: username }, { onConflict: 'x,y' });
+
+    if (error) {
+        console.error("Piksel gönderilemedi:", error);
+        alert("Bir hata oluştu, pikseliniz kaydedilemedi.");
+        // Hata durumunda tuvali yeniden yüklemek iyi bir fikir olabilir.
+    } else {
+        // 3. Zamanlayıcıyı başlat
+        startCooldownTimer();
+    }
+});
+
+// --- GERÇEK ZAMANLI GÜNCELLEMELER ---
+function subscribeToChanges() {
+    supabase.channel('pixels_changes')
+        .on(
+            'postgres_changes',
+            { event: '*', schema: 'public', table: 'pixels' },
+            (payload) => {
+                console.log('Yeni piksel geldi:', payload.new);
+                const { x, y, color } = payload.new;
+                drawPixel(x, y, color);
             }
+        )
+        .subscribe();
+}
 
-            const rect = canvas.getBoundingClientRect();
-            const x = Math.floor(e.clientX - rect.left);
-            const y = Math.floor(e.clientY - rect.top);
+// --- BAŞLANGIÇ FONKSİYONU ---
+function init() {
+    createColorPalette();
+    fetchInitialCanvas();
+    subscribeToChanges();
+    checkCooldown();
+}
 
-            drawPixel(x, y, selectedColor);
-
-            const { error } = await supabase
-                .from('pixels')
-                .upsert({ x, y, color: selectedColor, username: username }, { onConflict: 'x,y' });
-
-            if (error) {
-                console.error("Piksel gönderilemedi:", error);
-                alert("Bir hata oluştu, pikseliniz kaydedilemedi.");
-            } else {
-                startCooldownTimer();
-            }
-        });
-
-        // --- GERÇEK ZAMANLI GÜNCELLEMELER ---
-        function subscribeToChanges() {
-            supabase.channel('pixels_changes')
-                .on(
-                    'postgres_changes',
-                    { event: '*', schema: 'public', table: 'pixels' },
-                    (payload) => {
-                        console.log('Yeni piksel geldi:', payload.new);
-                        const { x, y, color } = payload.new;
-                        drawPixel(x, y, color);
-                    }
-                )
-                .subscribe();
-        }
-
-        // --- BAŞLANGIÇ FONKSİYONU ---
-        function init() {
-            createColorPalette();
-            fetchInitialCanvas();
-            subscribeToChanges();
-            checkCooldown();
-        }
-
-        // Uygulamayı başlat
-        handleUsername();
-    </script>
-</body>
-</html>
+// Uygulamayı başlat
+handleUsername();
