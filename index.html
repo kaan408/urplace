@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Global Tuval Projesi</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    
+    <!-- Kullanıcı adı girişi için modal -->
+    <div id="username-modal" class="modal-overlay">
+        <div class="modal-content">
+            <h2>Hoş Geldin!</h2>
+            <p>Lütfen tuvali kullanmak için bir isim gir.</p>
+            <input type="text" id="username-input" placeholder="İsminiz..." maxlength="15">
+            <button id="save-username-btn">Kaydet ve Başla</button>
+        </div>
+    </div>
+
+    <!-- Ana İçerik -->
+    <div class="container">
+        <h1>Global Tuval</h1>
+        <canvas id="main-canvas" width="1920" height="1080"></canvas>
+    </div>
+
+    <!-- Kontrol Paneli -->
+    <div class="controls">
+        <div class="user-info">
+            Kullanıcı: <strong id="username-display">...</strong>
+        </div>
+        <div id="color-palette">
+            <!-- Renkler JavaScript ile eklenecek -->
+        </div>
+        <div class="timer-info">
+            Kalan Süre: <strong id="timer-display">Hazır!</strong>
+        </div>
+    </div>
+
+    <!-- Supabase Kütüphanesini ekliyoruz -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <!-- Kendi JavaScript dosyamız -->
+    <script src="script.js"></script>
+</body>
+</html>
