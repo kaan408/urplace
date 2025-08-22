@@ -7,25 +7,42 @@
 
     <!-- ================== CSS KODLARI BURADA ================== -->
     <style>
-        body {
-            font-family: Arial, sans-serif;
-            background-color: #f0f2f5;
+        /* YENİ: Sayfa düzeni ve ortalama için temel stiller */
+        html, body {
+            height: 100%;
             margin: 0;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            overflow: hidden; 
+            overflow: hidden; /* Sayfanın kaymasını tamamen engelle */
+            background-color: #DADDE1; /* r/place benzeri arka plan rengi */
         }
 
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* YENİ: Tuvali ve başlığı ortalamak için ana içerik alanı */
+        .main-content {
+            flex-grow: 1; /* Kontrol paneli dışındaki tüm alanı kapla */
+            display: flex;
+            flex-direction: column;
+            justify-content: center; /* Dikeyde ortala */
+            align-items: center; /* Yatayda ortala */
+            padding: 20px; /* Kenarlardan boşluk */
+            box-sizing: border-box;
+            overflow: auto; /* Gerekirse scroll çıkmasını sağla */
+        }
+        
         .canvas-wrapper {
             position: relative;
             width: 1920px;
             height: 1080px;
-            margin-top: 20px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2); /* Tuvale gölge efekti */
         }
 
         h1 {
-            color: #333;
+            color: #1c1e21;
+            margin-bottom: 20px;
         }
 
         .canvas-wrapper canvas {
@@ -36,7 +53,7 @@
         }
 
         #main-canvas {
-            background-color: #f0f0f0; /* Arka planı hafif gri yaptık */
+            background-color: #f0f0f0;
             z-index: 0; 
         }
         
@@ -58,6 +75,7 @@
             justify-content: space-between;
             align-items: center;
             box-sizing: border-box;
+            z-index: 10;
         }
 
         .user-info, .timer-info {
@@ -87,7 +105,6 @@
             transform: scale(1.2);
         }
 
-        /* Modal Stilleri */
         .modal-overlay {
             position: fixed;
             top: 0;
@@ -108,26 +125,15 @@
             text-align: center;
         }
 
-        #username-input {
-            display: block;
-            margin: 15px auto;
+        #username-input, #save-username-btn {
+            font-size: 1em;
             padding: 10px;
-            width: 80%;
-        }
-
-        #save-username-btn {
-            padding: 10px 20px;
-            border: none;
-            background-color: #007bff;
-            color: white;
             border-radius: 5px;
-            cursor: pointer;
         }
     </style>
 </head>
 <body>
     
-    <!-- Kullanıcı adı girişi için modal -->
     <div id="username-modal" class="modal-overlay">
         <div class="modal-content">
             <h2>Hoş Geldin!</h2>
@@ -137,16 +143,15 @@
         </div>
     </div>
 
-    <!-- Ana İçerik -->
-    <div class="container">
+    <!-- YENİ: Ana içerik sarmalayıcısı -->
+    <main class="main-content">
         <h1>Global Tuval</h1>
         <div class="canvas-wrapper">
             <canvas id="main-canvas" width="1920" height="1080"></canvas>
             <canvas id="hover-canvas" width="1920" height="1080"></canvas>
         </div>
-    </div>
+    </main>
 
-    <!-- Kontrol Paneli -->
     <div class="controls">
         <div class="user-info">
             Kullanıcı: <strong id="username-display">...</strong>
@@ -157,10 +162,8 @@
         </div>
     </div>
 
-    <!-- Supabase Kütüphanesini ekliyoruz -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     
-    <!-- ================= JAVASCRIPT KODLARI BURADA ================= -->
     <script>
         // --- SUPABASE AYARLARI ---
         const SUPABASE_URL = 'https://mruogrrmbhehharznuru.supabase.co';
@@ -182,10 +185,9 @@
         const usernameInput = document.getElementById('username-input');
         const saveUsernameBtn = document.getElementById('save-username-btn');
 
-        // YENİ: Grid (Tablo) sistemi için ayarlar
-        const PIXEL_SIZE = 10; // Her bir piksel karesinin boyutu (10x10)
-        const GRID_WIDTH = canvas.width / PIXEL_SIZE; // 192
-        const GRID_HEIGHT = canvas.height / PIXEL_SIZE; // 108
+        const PIXEL_SIZE = 10;
+        const GRID_WIDTH = canvas.width / PIXEL_SIZE;
+        const GRID_HEIGHT = canvas.height / PIXEL_SIZE;
 
         let selectedColor; 
         let username = '';
@@ -220,17 +222,21 @@
             }
         });
         
-        // --- RENK PALETİ OLUŞTURMA ---
+        // DÜZELTİLDİ: Renk paleti fonksiyonu daha sağlam ve hatasız hale getirildi.
         function createColorPalette() {
-            colorPalette.innerHTML = '';
+            console.log("Renk paleti oluşturuluyor...");
+            colorPalette.innerHTML = ''; // Önce paleti temizle
             COLORS.forEach(color => {
                 const colorBox = document.createElement('div');
                 colorBox.className = 'color-box';
                 colorBox.style.backgroundColor = color;
                 colorBox.dataset.color = color;
                 colorBox.addEventListener('click', () => {
+                    console.log("Renk seçildi:", color);
                     const oldSelected = document.querySelector('.color-box.selected');
-                    if (oldSelected) oldSelected.classList.remove('selected');
+                    if (oldSelected) {
+                        oldSelected.classList.remove('selected');
+                    }
                     colorBox.classList.add('selected');
                     selectedColor = color;
                 });
@@ -244,22 +250,18 @@
             }
         }
         
-        // DEĞİŞTİ: Fonksiyon artık tek bir piksel değil, bir grid karesi çiziyor
         function drawGridCell(gridX, gridY, color) {
             ctx.fillStyle = color;
             ctx.fillRect(gridX * PIXEL_SIZE, gridY * PIXEL_SIZE, PIXEL_SIZE, PIXEL_SIZE);
         }
         
-        // YENİ: Sayfa ilk açıldığında beyaz karelerden ve çizgilerden oluşan tabloyu çizen fonksiyon
         function drawInitialGrid() {
-            ctx.clearRect(0, 0, canvas.width, canvas.height); // Önce tuvali temizle
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
             for (let x = 0; x < GRID_WIDTH; x++) {
                 for (let y = 0; y < GRID_HEIGHT; y++) {
-                    // Her kareyi beyaz doldur
                     ctx.fillStyle = '#FFFFFF';
                     ctx.fillRect(x * PIXEL_SIZE, y * PIXEL_SIZE, PIXEL_SIZE, PIXEL_SIZE);
-                    // Her karenin etrafına ince gri çizgi çiz
-                    ctx.strokeStyle = '#E0E0E0'; // Açık gri
+                    ctx.strokeStyle = '#E0E0E0';
                     ctx.strokeRect(x * PIXEL_SIZE, y * PIXEL_SIZE, PIXEL_SIZE, PIXEL_SIZE);
                 }
             }
@@ -273,23 +275,19 @@
                 alert("Veritabanına bağlanılamadı. Lütfen konsolu kontrol edin.");
             } else {
                 data.forEach(pixel => {
-                    // DEĞİŞTİ: Veritabanından gelen grid koordinatlarına göre kareleri çiz
                     drawGridCell(pixel.x, pixel.y, pixel.color);
                 });
                 console.log(`${data.length} piksel yüklendi.`);
             }
         }
         
-        // --- ZAMANLAYICI (COOLDOWN) ---
         let cooldownInterval;
         function startCooldownTimer() { /* Bu fonksiyon aynı kaldı */ }
         function checkCooldown() { /* Bu fonksiyon aynı kaldı */ }
         function startCooldownTimerFrom(startTime) { /* Bu fonksiyon aynı kaldı */ }
         startCooldownTimer.toString = () => "/* ... Bu fonksiyon aynı kaldı ... */"; checkCooldown.toString = () => "/* ... Bu fonksiyon aynı kaldı ... */"; startCooldownTimerFrom.toString = () => "/* ... Bu fonksiyon aynı kaldı ... */";
         
-        // --- OLAY DİNLEYİCİLERİ ---
         hoverCanvas.addEventListener('mousemove', (e) => {
-            // DEĞİŞTİ: Fare koordinatlarını grid koordinatlarına çeviriyoruz
             const rect = hoverCanvas.getBoundingClientRect();
             const screenX = e.clientX - rect.left;
             const screenY = e.clientY - rect.top;
@@ -298,7 +296,6 @@
 
             hoverCtx.clearRect(0, 0, hoverCanvas.width, hoverCanvas.height);
             hoverCtx.fillStyle = selectedColor;
-            // DEĞİŞTİ: Önizlemeyi tek piksel değil, tam kare olarak çiziyoruz
             hoverCtx.fillRect(gridX * PIXEL_SIZE, gridY * PIXEL_SIZE, PIXEL_SIZE, PIXEL_SIZE);
         });
 
@@ -307,19 +304,22 @@
         });
 
         hoverCanvas.addEventListener('click', async (e) => {
-            if (!username || !checkCooldown()) return;
-
-            // DEĞİŞTİ: Tıklama koordinatlarını grid koordinatlarına çeviriyoruz
+            if (!username) {
+                alert("Lütfen önce bir kullanıcı adı belirleyin.");
+                return;
+            }
+            if (!checkCooldown()) {
+                alert("Lütfen bir sonraki piksel için bekleyin.");
+                return;
+            }
             const rect = hoverCanvas.getBoundingClientRect();
             const screenX = e.clientX - rect.left;
             const screenY = e.clientY - rect.top;
             const gridX = Math.floor(screenX / PIXEL_SIZE);
             const gridY = Math.floor(screenY / PIXEL_SIZE);
 
-            // DEĞİŞTİ: Kalıcı kareyi ana tuvale çiz
             drawGridCell(gridX, gridY, selectedColor);
 
-            // DEĞİŞTİ: Veritabanına ekran koordinatları yerine grid koordinatlarını gönder
             const { error } = await supabaseClient
                 .from('pixels')
                 .upsert({ x: gridX, y: gridY, color: selectedColor, username: username }, { onConflict: 'x,y' });
@@ -332,29 +332,23 @@
             }
         });
 
-        // --- GERÇEK ZAMANLI GÜNCELLEMELER ---
         function subscribeToChanges() {
             supabaseClient.channel('pixels_changes')
                 .on('postgres_changes', { event: '*', schema: 'public', table: 'pixels' }, (payload) => {
                     console.log('Yeni piksel geldi:', payload.new);
-                    // DEĞİŞTİ: Gelen yeni pikselleri de grid koordinatlarına göre çiz
                     drawGridCell(payload.new.x, payload.new.y, payload.new.color);
                 })
                 .subscribe();
         }
 
-        // --- BAŞLANGIÇ FONKSİYONU ---
         function init() {
             createColorPalette();
-            // YENİ: Önce boş beyaz tabloyu çiz
             drawInitialGrid();
-            // Sonra veritabanındaki pikselleri bu tablonun üzerine çiz
             fetchInitialCanvas();
             subscribeToChanges();
             checkCooldown();
         }
         
-        // Uygulamayı başlat
         handleUsername();
     </script>
 </body>
