@@ -150,11 +150,11 @@
     <script>
         // --- SUPABASE AYARLARI ---
         // SENİN BİLGİLERİNLE DOLDURULDU:
-        const SUPABASE_URL = 'postgresql://postgres:[YOUR-PASSWORD]@db.mruogrrmbhehharznuru.supabase.co:5432/postgres';
+        const SUPABASE_URL = 'https://mruogrrmbhehharznuru.supabase.co';
         const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1ydW9ncnJtYmhlaGhhcnpudXJ1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTU4MzcwNDUsImV4cCI6MjA3MTQxMzA0NX0.q6s8w-xty1NWiPEDJrnsVV-7I-SNrz0qdENsuPjLhBk';
 
         const { createClient } = supabase;
-        const supabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        const supabase = createClient(supabaseUrl, supabaseKey);
 
         // --- GLOBAL DEĞİŞKENLER ---
         const canvas = document.getElementById('main-canvas');
