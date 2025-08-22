@@ -5,30 +5,27 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Global Tuval Projesi</title>
 
-    <!-- ================== CSS KODLARI BURADA ================== -->
     <style>
+        /* TEMEL SAYFA DÜZENİ */
         html, body {
             height: 100%;
             margin: 0;
             overflow: hidden; 
             background-color: #DADDE1; 
-        }
-
-        body {
             font-family: Arial, sans-serif;
             display: flex;
             flex-direction: column;
         }
 
-        .main-content {
-            flex-grow: 1;
-            display: flex;
-            flex-direction: column;
-            justify-content: center; 
-            align-items: center; 
-            padding: 20px;
-            box-sizing: border-box;
-            overflow: auto; 
+        /* YENİ: KAYDIRMA VE YAKINLAŞTIRMA İÇİN GÖRÜNTÜ ALANI */
+        #canvas-viewport {
+            flex-grow: 1; /* Kontrol paneli hariç tüm alanı kapla */
+            width: 100%;
+            overflow: hidden; /* Dışarı taşan tuvali gizle */
+            cursor: grab; /* Kaydırma imleci */
+        }
+        #canvas-viewport:active {
+            cursor: grabbing; /* Tıklanırkenki kaydırma imleci */
         }
         
         .canvas-wrapper {
@@ -36,11 +33,6 @@
             width: 1920px;
             height: 1080px;
             box-shadow: 0 4px 12px rgba(0,0,0,0.2); 
-        }
-
-        h1 {
-            color: #1c1e21;
-            margin-bottom: 20px;
         }
 
         .canvas-wrapper canvas {
@@ -59,75 +51,61 @@
             background-color: transparent;
             cursor: crosshair;
             z-index: 1; 
+            pointer-events: none; /* Tıklamaların alttaki panzoom'a gitmesini engelleme */
         }
 
+        /* KONTROL PANELİ */
         .controls {
-            position: fixed;
-            bottom: 0;
-            left: 0;
-            width: 100%;
+            padding: 10px 20px;
             background-color: #fff;
             border-top: 1px solid #ccc;
-            padding: 10px 20px;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            box-sizing: border-box;
+            flex-shrink: 0; /* Küçülmesini engelle */
             z-index: 10;
         }
 
         .user-info, .timer-info {
             font-size: 1.1em;
+            margin: 0 15px;
         }
 
-        #color-palette {
+        /* YENİ: RENK SEÇİCİ STİLİ */
+        #color-picker-container {
             display: flex;
+            align-items: center;
             gap: 10px;
         }
-
-        .color-box {
-            width: 30px;
-            height: 30px;
-            border: 3px solid transparent; 
+        #color-picker {
+            width: 50px;
+            height: 40px;
+            border: 1px solid #ccc;
             border-radius: 5px;
             cursor: pointer;
-            transition: transform 0.2s, border-color 0.2s;
+        }
+        #color-picker-label {
+            font-weight: bold;
         }
 
-        .color-box:hover {
-            transform: scale(1.1);
-        }
-        
-        .color-box.selected {
-            border-color: #007bff;
-            transform: scale(1.2);
-        }
-
-        .modal-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(0, 0, 0, 0.7);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            z-index: 1000;
-        }
-
-        .modal-content {
-            background-color: white;
-            padding: 30px;
-            border-radius: 10px;
-            text-align: center;
-        }
-
-        #username-input, #save-username-btn {
-            font-size: 1em;
-            padding: 10px;
+        /* YENİ: BİLGİ KUTUCUĞU (TOOLTIP) */
+        #tooltip {
+            position: fixed; /* Ekrana göre konumlan */
+            display: none;
+            background-color: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 8px 12px;
             border-radius: 5px;
+            font-size: 0.9em;
+            pointer-events: none; /* Farenin tooltip'i algılamasını engelle */
+            z-index: 1001;
         }
+
+        /* MODAL (KULLANICI GİRİŞİ) */
+        .modal-overlay { /* ... Bu stil aynı kaldı ... */ }
+        .modal-content { /* ... Bu stil aynı kaldı ... */ }
+        #username-input, #save-username-btn { /* ... Bu stil aynı kaldı ... */ }
+        .modal-overlay{position:fixed;top:0;left:0;width:100%;height:100%;background-color:rgba(0,0,0,.7);display:flex;justify-content:center;align-items:center;z-index:1000}.modal-content{background-color:#fff;padding:30px;border-radius:10px;text-align:center}#username-input,#save-username-btn{font-size:1em;padding:10px;border-radius:5px}
     </style>
 </head>
 <body>
@@ -141,31 +119,39 @@
         </div>
     </div>
 
-    <main class="main-content">
-        <h1>Global Tuval</h1>
+    <!-- YENİ: Pan/Zoom için Görüntü Alanı -->
+    <div id="canvas-viewport">
         <div class="canvas-wrapper">
             <canvas id="main-canvas" width="1920" height="1080"></canvas>
             <canvas id="hover-canvas" width="1920" height="1080"></canvas>
         </div>
-    </main>
+    </div>
+    
+    <!-- YENİ: Bilgi Kutucuğu -->
+    <div id="tooltip"></div>
 
     <div class="controls">
         <div class="user-info">
             Kullanıcı: <strong id="username-display">...</strong>
         </div>
-        <div id="color-palette"></div>
+        <!-- YENİ: Renk Seçici -->
+        <div id="color-picker-container">
+            <label for="color-picker" id="color-picker-label">Renk Seç:</label>
+            <input type="color" id="color-picker" value="#FF0000">
+        </div>
         <div class="timer-info">
             Kalan Süre: <strong id="timer-display">Hazır!</strong>
         </div>
     </div>
 
+    <!-- YENİ: Panzoom Kütüphanesi -->
+    <script src="https://cdn.jsdelivr.net/npm/@panzoom/panzoom@4.5.1/dist/panzoom.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     
     <script>
         // --- SUPABASE AYARLARI ---
         const SUPABASE_URL = 'https://mruogrrmbhehharznuru.supabase.co';
         const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1ydW9ncnJtYmhlaGhhcnpudXJ1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTU4MzcwNDUsImV4cCI6MjA3MTQxMzA0NX0.q6s8w-xty1NWiPEDJrnsVV-7I-SNrz0qdENsuPjLhBk';
-
         const { createClient } = supabase;
         const supabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
@@ -174,8 +160,8 @@
         const ctx = canvas.getContext('2d');
         const hoverCanvas = document.getElementById('hover-canvas');
         const hoverCtx = hoverCanvas.getContext('2d');
-        
-        const colorPalette = document.getElementById('color-palette');
+        const colorPicker = document.getElementById('color-picker');
+        const tooltip = document.getElementById('tooltip');
         const timerDisplay = document.getElementById('timer-display');
         const usernameDisplay = document.getElementById('username-display');
         const usernameModal = document.getElementById('username-modal');
@@ -185,17 +171,160 @@
         const PIXEL_SIZE = 10;
         const GRID_WIDTH = canvas.width / PIXEL_SIZE;
         const GRID_HEIGHT = canvas.height / PIXEL_SIZE;
-
-        let selectedColor; 
+        
+        let selectedColor = colorPicker.value;
         let username = '';
         const COOLDOWN_SECONDS = 60;
+        
+        // YENİ: Pan/Zoom ve Tooltip için değişkenler
+        const viewport = document.getElementById('canvas-viewport');
+        const canvasWrapper = document.querySelector('.canvas-wrapper');
+        let panzoomInstance;
+        const pixelDataMap = new Map(); // Piksel verilerini yerel olarak saklamak için
 
-        const COLORS = [
-            '#FF0000', '#00FF00', '#0000FF', '#FFFF00', '#FF00FF', '#00FFFF', 
-            '#000000', '#FFFFFF', '#808080', '#FFA500', '#800080', '#A52A2A'
-        ];
+        // --- RENK SEÇİCİ KURULUMU ---
+        function setupColorPicker() {
+            colorPicker.addEventListener('input', (e) => {
+                selectedColor = e.target.value;
+            });
+        }
+        
+        // --- PAN/ZOOM KURULUMU ---
+        function setupPanzoom() {
+            panzoomInstance = Panzoom(canvasWrapper, {
+                maxScale: 15,
+                minScale: 0.2,
+                canvas: true, // Daha iyi performans için
+                step: 0.1
+            });
+            // Fare tekerleği ile zoom yapma
+            viewport.addEventListener('wheel', panzoomInstance.zoomWithWheel);
+        }
 
         // --- KULLANICI İSMİ YÖNETİMİ ---
+        function handleUsername() { /* ... Bu fonksiyon aynı kaldı ... */ }
+        saveUsernameBtn.addEventListener('click', () => { /* ... Bu fonksiyon aynı kaldı ... */ });
+        handleUsername.toString = () => "/* ... Bu fonksiyon aynı kaldı ... */"; saveUsernameBtn.addEventListener.toString = () => "/* ... Bu fonksiyon aynı kaldı ... */";
+        
+        // --- TUVAL VE TABLO ÇİZİMİ ---
+        function drawGridCell(gridX, gridY, color) { /* ... Bu fonksiyon aynı kaldı ... */ }
+        function drawInitialGrid() { /* ... Bu fonksiyon aynı kaldı ... */ }
+        drawGridCell.toString = () => "/* ... Bu fonksiyon aynı kaldı ... */"; drawInitialGrid.toString = () => "/* ... Bu fonksiyon aynı kaldı ... */";
+
+        async function fetchInitialCanvas() {
+            console.log("Mevcut pikseller çekiliyor...");
+            pixelDataMap.clear(); // Haritayı temizle
+            const { data, error } = await supabaseClient.from('pixels').select('*');
+            if (error) {
+                console.error("Pikselleri çekerken hata:", error);
+            } else {
+                data.forEach(pixel => {
+                    drawGridCell(pixel.x, pixel.y, pixel.color);
+                    // YENİ: Piksel verisini yerel haritaya kaydet
+                    const key = `${pixel.x},${pixel.y}`;
+                    pixelDataMap.set(key, { username: pixel.username, color: pixel.color });
+                });
+                console.log(`${data.length} piksel yüklendi.`);
+            }
+        }
+        
+        // --- ZAMANLAYICI ---
+        let cooldownInterval;
+        function startCooldownTimer() { /* ... Bu fonksiyon aynı kaldı ... */ }
+        function checkCooldown() { /* ... Bu fonksiyon aynı kaldı ... */ }
+        function startCooldownTimerFrom(startTime) { /* ... Bu fonksiyon aynı kaldı ... */ }
+        startCooldownTimer.toString = () => "/* ... Bu fonksiyon aynı kaldı ... */"; checkCooldown.toString = () => "/* ... Bu fonksiyon aynı kaldı ... */"; startCooldownTimerFrom.toString = () => "/* ... Bu fonksiyon aynı kaldı ... */";
+        
+        // --- OLAY DİNLEYİCİLERİ (Pan/Zoom ile uyumlu hale getirildi) ---
+        function getGridCoordinatesFromEvent(e) {
+            const { scale, x: translateX, y: translateY } = panzoomInstance.getTransform();
+            const rect = viewport.getBoundingClientRect();
+            const screenX = e.clientX - rect.left;
+            const screenY = e.clientY - rect.top;
+            
+            const canvasX = (screenX - translateX) / scale;
+            const canvasY = (screenY - translateY) / scale;
+            
+            const gridX = Math.floor(canvasX / PIXEL_SIZE);
+            const gridY = Math.floor(canvasY / PIXEL_SIZE);
+
+            if (gridX >= 0 && gridX < GRID_WIDTH && gridY >= 0 && gridY < GRID_HEIGHT) {
+                return { gridX, gridY };
+            }
+            return null; // Tuvalin dışındaysa null döndür
+        }
+
+        viewport.addEventListener('mousemove', (e) => {
+            const coords = getGridCoordinatesFromEvent(e);
+            hoverCtx.clearRect(0, 0, hoverCanvas.width, hoverCanvas.height);
+            tooltip.style.display = 'none';
+
+            if (coords) {
+                // Önizleme karesini çiz
+                hoverCtx.fillStyle = selectedColor;
+                hoverCtx.fillRect(coords.gridX * PIXEL_SIZE, coords.gridY * PIXEL_SIZE, PIXEL_SIZE, PIXEL_SIZE);
+                
+                // Tooltip'i güncelle ve göster
+                const key = `${coords.gridX},${coords.gridY}`;
+                if (pixelDataMap.has(key)) {
+                    const data = pixelDataMap.get(key);
+                    tooltip.innerHTML = `(${coords.gridX}, ${coords.gridY})<br>Yapan: ${data.username}<br>Renk: ${data.color}`;
+                    tooltip.style.left = `${e.clientX + 15}px`;
+                    tooltip.style.top = `${e.clientY + 15}px`;
+                    tooltip.style.display = 'block';
+                }
+            }
+        });
+
+        viewport.addEventListener('click', async (e) => {
+            if (!username || !checkCooldown()) return;
+            
+            const coords = getGridCoordinatesFromEvent(e);
+            if (!coords) return; // Tuval dışına tıklanırsa işlem yapma
+
+            drawGridCell(coords.gridX, coords.gridY, selectedColor);
+            const key = `${coords.gridX},${coords.gridY}`;
+            pixelDataMap.set(key, { username: username, color: selectedColor });
+
+            const { error } = await supabaseClient
+                .from('pixels')
+                .upsert({ x: coords.gridX, y: coords.gridY, color: selectedColor, username: username }, { onConflict: 'x,y' });
+
+            if (error) {
+                console.error("Piksel gönderilemedi:", error);
+                pixelDataMap.delete(key); // Hata olursa yerel değişikliği geri al
+            } else {
+                startCooldownTimer();
+            }
+        });
+
+        // --- GERÇEK ZAMANLI GÜNCELLEMELER ---
+        function subscribeToChanges() {
+            supabaseClient.channel('pixels_changes')
+                .on('postgres_changes', { event: '*', schema: 'public', table: 'pixels' }, (payload) => {
+                    const { x, y, color, username } = payload.new;
+                    drawGridCell(x, y, color);
+                    // YENİ: Yerel haritayı da güncelle
+                    const key = `${x},${y}`;
+                    pixelDataMap.set(key, { username: username, color: color });
+                })
+                .subscribe();
+        }
+
+        // --- BAŞLANGIÇ FONKSİYONU ---
+        function init() {
+            setupColorPicker();
+            setupPanzoom();
+            drawInitialGrid();
+            fetchInitialCanvas();
+            subscribeToChanges();
+            checkCooldown();
+        }
+        
+        handleUsername();
+    </script>
+    <!-- Değişmeyen fonksiyonların tam hali (JavaScript hatası olmaması için) -->
+    <script>
         function handleUsername() {
             const savedUsername = localStorage.getItem('global_canvas_username');
             if (savedUsername) {
@@ -207,7 +336,6 @@
                 usernameModal.style.display = 'flex';
             }
         }
-
         saveUsernameBtn.addEventListener('click', () => {
             const name = usernameInput.value.trim();
             if (name) {
@@ -218,39 +346,10 @@
                 init(); 
             }
         });
-        
-        // --- RENK PALETİ OLUŞTURMA ---
-        function createColorPalette() {
-            colorPalette.innerHTML = '';
-            COLORS.forEach(color => {
-                const colorBox = document.createElement('div');
-                colorBox.className = 'color-box';
-                colorBox.style.backgroundColor = color;
-                colorBox.dataset.color = color;
-                colorBox.addEventListener('click', () => {
-                    const oldSelected = document.querySelector('.color-box.selected');
-                    if (oldSelected) {
-                        oldSelected.classList.remove('selected');
-                    }
-                    colorBox.classList.add('selected');
-                    selectedColor = color;
-                });
-                colorPalette.appendChild(colorBox);
-            });
-            
-            const firstColorBox = colorPalette.firstChild;
-            if (firstColorBox) {
-                firstColorBox.classList.add('selected');
-                selectedColor = firstColorBox.dataset.color;
-            }
-        }
-        
-        // --- TUVAL VE TABLO ÇİZİMİ ---
         function drawGridCell(gridX, gridY, color) {
             ctx.fillStyle = color;
             ctx.fillRect(gridX * PIXEL_SIZE, gridY * PIXEL_SIZE, PIXEL_SIZE, PIXEL_SIZE);
         }
-        
         function drawInitialGrid() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             for (let x = 0; x < GRID_WIDTH; x++) {
@@ -262,29 +361,12 @@
                 }
             }
         }
-
-        async function fetchInitialCanvas() {
-            console.log("Mevcut pikseller çekiliyor...");
-            const { data, error } = await supabaseClient.from('pixels').select('*');
-            if (error) {
-                console.error("Pikselleri çekerken hata:", error);
-                alert("Veritabanına bağlanılamadı. Lütfen konsolu kontrol edin.");
-            } else {
-                data.forEach(pixel => {
-                    drawGridCell(pixel.x, pixel.y, pixel.color);
-                });
-                console.log(`${data.length} piksel yüklendi.`);
-            }
-        }
-        
-        // --- ZAMANLAYICI (COOLDOWN) ---
         let cooldownInterval;
         function startCooldownTimer() {
             let timeLeft = COOLDOWN_SECONDS;
             localStorage.setItem('last_pixel_time', Date.now());
             timerDisplay.textContent = `${timeLeft}s`;
             hoverCanvas.style.cursor = 'not-allowed';
-
             cooldownInterval = setInterval(() => {
                 timeLeft--;
                 timerDisplay.textContent = `${timeLeft}s`;
@@ -295,11 +377,9 @@
                 }
             }, 1000);
         }
-
         function checkCooldown() {
             const lastPixelTime = localStorage.getItem('last_pixel_time');
             if (!lastPixelTime) return true; 
-
             const secondsPassed = (Date.now() - parseInt(lastPixelTime)) / 1000;
             if (secondsPassed >= COOLDOWN_SECONDS) {
                 return true;
@@ -309,13 +389,11 @@
                 return false;
             }
         }
-        
         function startCooldownTimerFrom(startTime) {
             clearInterval(cooldownInterval);
             let timeLeft = startTime;
             timerDisplay.textContent = `${timeLeft}s`;
             hoverCanvas.style.cursor = 'not-allowed';
-
             cooldownInterval = setInterval(() => {
                 timeLeft--;
                 timerDisplay.textContent = `${timeLeft}s`;
@@ -326,73 +404,6 @@
                 }
             }, 1000);
         }
-
-        // --- OLAY DİNLEYİCİLERİ ---
-        hoverCanvas.addEventListener('mousemove', (e) => {
-            const rect = hoverCanvas.getBoundingClientRect();
-            const screenX = e.clientX - rect.left;
-            const screenY = e.clientY - rect.top;
-            const gridX = Math.floor(screenX / PIXEL_SIZE);
-            const gridY = Math.floor(screenY / PIXEL_SIZE);
-
-            hoverCtx.clearRect(0, 0, hoverCanvas.width, hoverCanvas.height);
-            hoverCtx.fillStyle = selectedColor;
-            hoverCtx.fillRect(gridX * PIXEL_SIZE, gridY * PIXEL_SIZE, PIXEL_SIZE, PIXEL_SIZE);
-        });
-
-        hoverCanvas.addEventListener('mouseout', () => {
-            hoverCtx.clearRect(0, 0, hoverCanvas.width, hoverCanvas.height);
-        });
-
-        hoverCanvas.addEventListener('click', async (e) => {
-            if (!username) {
-                alert("Lütfen önce bir kullanıcı adı belirleyin.");
-                return;
-            }
-            if (!checkCooldown()) {
-                alert("Lütfen bir sonraki piksel için bekleyin.");
-                return;
-            }
-            const rect = hoverCanvas.getBoundingClientRect();
-            const screenX = e.clientX - rect.left;
-            const screenY = e.clientY - rect.top;
-            const gridX = Math.floor(screenX / PIXEL_SIZE);
-            const gridY = Math.floor(screenY / PIXEL_SIZE);
-
-            drawGridCell(gridX, gridY, selectedColor);
-
-            const { error } = await supabaseClient
-                .from('pixels')
-                .upsert({ x: gridX, y: gridY, color: selectedColor, username: username }, { onConflict: 'x,y' });
-
-            if (error) {
-                console.error("Piksel gönderilemedi:", error);
-                alert("Bir hata oluştu, pikseliniz kaydedilemedi.");
-            } else {
-                startCooldownTimer();
-            }
-        });
-
-        // --- GERÇEK ZAMANLI GÜNCELLEMELER ---
-        function subscribeToChanges() {
-            supabaseClient.channel('pixels_changes')
-                .on('postgres_changes', { event: '*', schema: 'public', table: 'pixels' }, (payload) => {
-                    console.log('Yeni piksel geldi:', payload.new);
-                    drawGridCell(payload.new.x, payload.new.y, payload.new.color);
-                })
-                .subscribe();
-        }
-
-        // --- BAŞLANGIÇ FONKSİYONU ---
-        function init() {
-            createColorPalette();
-            drawInitialGrid();
-            fetchInitialCanvas();
-            subscribeToChanges();
-            checkCooldown();
-        }
-        
-        handleUsername();
     </script>
 </body>
 </html>
