@@ -7,12 +7,11 @@
 
     <!-- ================== CSS KODLARI BURADA ================== -->
     <style>
-        /* YENİ: Sayfa düzeni ve ortalama için temel stiller */
         html, body {
             height: 100%;
             margin: 0;
-            overflow: hidden; /* Sayfanın kaymasını tamamen engelle */
-            background-color: #DADDE1; /* r/place benzeri arka plan rengi */
+            overflow: hidden; 
+            background-color: #DADDE1; 
         }
 
         body {
@@ -21,23 +20,22 @@
             flex-direction: column;
         }
 
-        /* YENİ: Tuvali ve başlığı ortalamak için ana içerik alanı */
         .main-content {
-            flex-grow: 1; /* Kontrol paneli dışındaki tüm alanı kapla */
+            flex-grow: 1;
             display: flex;
             flex-direction: column;
-            justify-content: center; /* Dikeyde ortala */
-            align-items: center; /* Yatayda ortala */
-            padding: 20px; /* Kenarlardan boşluk */
+            justify-content: center; 
+            align-items: center; 
+            padding: 20px;
             box-sizing: border-box;
-            overflow: auto; /* Gerekirse scroll çıkmasını sağla */
+            overflow: auto; 
         }
         
         .canvas-wrapper {
             position: relative;
             width: 1920px;
             height: 1080px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.2); /* Tuvale gölge efekti */
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2); 
         }
 
         h1 {
@@ -143,7 +141,6 @@
         </div>
     </div>
 
-    <!-- YENİ: Ana içerik sarmalayıcısı -->
     <main class="main-content">
         <h1>Global Tuval</h1>
         <div class="canvas-wrapper">
@@ -222,17 +219,15 @@
             }
         });
         
-        // DÜZELTİLDİ: Renk paleti fonksiyonu daha sağlam ve hatasız hale getirildi.
+        // --- RENK PALETİ OLUŞTURMA ---
         function createColorPalette() {
-            console.log("Renk paleti oluşturuluyor...");
-            colorPalette.innerHTML = ''; // Önce paleti temizle
+            colorPalette.innerHTML = '';
             COLORS.forEach(color => {
                 const colorBox = document.createElement('div');
                 colorBox.className = 'color-box';
                 colorBox.style.backgroundColor = color;
                 colorBox.dataset.color = color;
                 colorBox.addEventListener('click', () => {
-                    console.log("Renk seçildi:", color);
                     const oldSelected = document.querySelector('.color-box.selected');
                     if (oldSelected) {
                         oldSelected.classList.remove('selected');
@@ -250,6 +245,7 @@
             }
         }
         
+        // --- TUVAL VE TABLO ÇİZİMİ ---
         function drawGridCell(gridX, gridY, color) {
             ctx.fillStyle = color;
             ctx.fillRect(gridX * PIXEL_SIZE, gridY * PIXEL_SIZE, PIXEL_SIZE, PIXEL_SIZE);
@@ -281,12 +277,57 @@
             }
         }
         
+        // --- ZAMANLAYICI (COOLDOWN) ---
         let cooldownInterval;
-        function startCooldownTimer() { /* Bu fonksiyon aynı kaldı */ }
-        function checkCooldown() { /* Bu fonksiyon aynı kaldı */ }
-        function startCooldownTimerFrom(startTime) { /* Bu fonksiyon aynı kaldı */ }
-        startCooldownTimer.toString = () => "/* ... Bu fonksiyon aynı kaldı ... */"; checkCooldown.toString = () => "/* ... Bu fonksiyon aynı kaldı ... */"; startCooldownTimerFrom.toString = () => "/* ... Bu fonksiyon aynı kaldı ... */";
+        function startCooldownTimer() {
+            let timeLeft = COOLDOWN_SECONDS;
+            localStorage.setItem('last_pixel_time', Date.now());
+            timerDisplay.textContent = `${timeLeft}s`;
+            hoverCanvas.style.cursor = 'not-allowed';
+
+            cooldownInterval = setInterval(() => {
+                timeLeft--;
+                timerDisplay.textContent = `${timeLeft}s`;
+                if (timeLeft <= 0) {
+                    clearInterval(cooldownInterval);
+                    timerDisplay.textContent = 'Hazır!';
+                    hoverCanvas.style.cursor = 'crosshair';
+                }
+            }, 1000);
+        }
+
+        function checkCooldown() {
+            const lastPixelTime = localStorage.getItem('last_pixel_time');
+            if (!lastPixelTime) return true; 
+
+            const secondsPassed = (Date.now() - parseInt(lastPixelTime)) / 1000;
+            if (secondsPassed >= COOLDOWN_SECONDS) {
+                return true;
+            } else {
+                const remaining = Math.ceil(COOLDOWN_SECONDS - secondsPassed);
+                startCooldownTimerFrom(remaining);
+                return false;
+            }
+        }
         
+        function startCooldownTimerFrom(startTime) {
+            clearInterval(cooldownInterval);
+            let timeLeft = startTime;
+            timerDisplay.textContent = `${timeLeft}s`;
+            hoverCanvas.style.cursor = 'not-allowed';
+
+            cooldownInterval = setInterval(() => {
+                timeLeft--;
+                timerDisplay.textContent = `${timeLeft}s`;
+                if (timeLeft <= 0) {
+                    clearInterval(cooldownInterval);
+                    timerDisplay.textContent = 'Hazır!';
+                    hoverCanvas.style.cursor = 'crosshair';
+                }
+            }, 1000);
+        }
+
+        // --- OLAY DİNLEYİCİLERİ ---
         hoverCanvas.addEventListener('mousemove', (e) => {
             const rect = hoverCanvas.getBoundingClientRect();
             const screenX = e.clientX - rect.left;
@@ -332,6 +373,7 @@
             }
         });
 
+        // --- GERÇEK ZAMANLI GÜNCELLEMELER ---
         function subscribeToChanges() {
             supabaseClient.channel('pixels_changes')
                 .on('postgres_changes', { event: '*', schema: 'public', table: 'pixels' }, (payload) => {
@@ -341,6 +383,7 @@
                 .subscribe();
         }
 
+        // --- BAŞLANGIÇ FONKSİYONU ---
         function init() {
             createColorPalette();
             drawInitialGrid();
