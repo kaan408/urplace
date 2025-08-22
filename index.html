@@ -59,16 +59,17 @@
         .color-box {
             width: 30px;
             height: 30px;
-            border: 2px solid transparent;
+            border: 3px solid transparent; /* Çerçeveyi daha görünür yaptım */
             border-radius: 5px;
             cursor: pointer;
-            transition: transform 0.2s;
+            transition: transform 0.2s, border-color 0.2s;
         }
 
         .color-box:hover {
             transform: scale(1.1);
         }
 
+        /* DÜZELTME: Seçili kutunun çerçevesini daha belirgin hale getirdim */
         .color-box.selected {
             border-color: #007bff;
             transform: scale(1.2);
@@ -149,7 +150,6 @@
     <!-- ================= JAVASCRIPT KODLARI BURADA ================= -->
     <script>
         // --- SUPABASE AYARLARI ---
-        // SENİN BİLGİLERİNLE DOLDURULDU:
         const SUPABASE_URL = 'https://mruogrrmbhehharznuru.supabase.co';
         const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1ydW9ncnJtYmhlaGhhcnpudXJ1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTU4MzcwNDUsImV4cCI6MjA3MTQxMzA0NX0.q6s8w-xty1NWiPEDJrnsVV-7I-SNrz0qdENsuPjLhBk';
 
@@ -166,7 +166,8 @@
         const usernameInput = document.getElementById('username-input');
         const saveUsernameBtn = document.getElementById('save-username-btn');
 
-        let selectedColor = '#000000';
+        // --- DÜZELTME 1: Başlangıç değeri vermiyoruz, aşağıda atayacağız ---
+        let selectedColor; 
         let username = '';
         const COOLDOWN_SECONDS = 60; // 1 dakika
 
@@ -182,7 +183,7 @@
                 username = savedUsername;
                 usernameDisplay.textContent = username;
                 usernameModal.style.display = 'none';
-                init(); // Kullanıcı adı varsa uygulamayı başlat
+                init(); 
             } else {
                 usernameModal.style.display = 'flex';
             }
@@ -195,29 +196,37 @@
                 localStorage.setItem('global_canvas_username', username);
                 usernameDisplay.textContent = username;
                 usernameModal.style.display = 'none';
-                init(); // Kullanıcı adı kaydedilince uygulamayı başlat
+                init(); 
             }
         });
 
         // --- RENK PALETİ OLUŞTURMA ---
         function createColorPalette() {
-            colorPalette.innerHTML = ''; // Paleti temizle
+            colorPalette.innerHTML = '';
             COLORS.forEach(color => {
                 const colorBox = document.createElement('div');
                 colorBox.className = 'color-box';
                 colorBox.style.backgroundColor = color;
                 colorBox.dataset.color = color;
                 colorBox.addEventListener('click', () => {
-                    selectedColor = color;
-                    document.querySelector('.color-box.selected')?.classList.remove('selected');
+                    // Önceki seçilinin class'ını kaldır
+                    const oldSelected = document.querySelector('.color-box.selected');
+                    if (oldSelected) {
+                        oldSelected.classList.remove('selected');
+                    }
+                    // Yeni tıklanana class ekle
                     colorBox.classList.add('selected');
+                    // Hafızadaki rengi güncelle
+                    selectedColor = color;
                 });
                 colorPalette.appendChild(colorBox);
             });
-            // İlk rengi seçili yap
-            if (colorPalette.firstChild) {
-                colorPalette.firstChild.classList.add('selected');
-                selectedColor = colorPalette.firstChild.dataset.color;
+            
+            // --- DÜZELTME 2: Sayfa ilk açıldığında ilk rengi hem görsel hem de kodda seçili yap ---
+            const firstColorBox = colorPalette.firstChild;
+            if (firstColorBox) {
+                firstColorBox.classList.add('selected');
+                selectedColor = firstColorBox.dataset.color; // Hafızadaki rengi de ilk renge ayarla
             }
         }
 
