@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Uplace</title>
+    <title>Urplace</title>
 
     <style>
         /* TEMEL SAYFA DÜZENİ */
@@ -13,18 +13,10 @@
             display: flex; flex-direction: column;
             user-select: none;
         }
-        
         .main-content {
-            flex-grow: 1;
-            overflow: auto; /* Tuvalin kaydırılabilmesini sağlar */
-            display: grid; /* Flexbox yerine Grid kullanıldı */
-            place-items: center; /* Hem dikey hem yatayda mükemmel ortalama */
+            flex-grow: 1; display: grid; place-items: center; overflow: auto;
         }
-        
-        .content-inner {
-            text-align: center;
-        }
-
+        .content-inner { text-align: center; }
         .canvas-wrapper {
             position: relative; width: 1920px; height: 1080px;
             box-shadow: 0 4px 12px rgba(0,0,0,0.2); flex-shrink: 0;
@@ -32,7 +24,7 @@
         .canvas-wrapper canvas {
             position: absolute; top: 0; left: 0; border: 2px solid #333;
         }
-        #main-canvas { background-color: #FFFFFF; z-index: 0; }
+        #main-canvas { background-color: #f0f0f0; z-index: 0; }
         #hover-canvas { background-color: transparent; cursor: crosshair; z-index: 1; }
         
         /* BİLGİ PANELLERİ */
@@ -85,10 +77,12 @@
             <button id="save-username-btn">Kaydet ve Başla</button>
         </div>
     </div>
+
     <div id="online-users-container" class="info-panel">
         <span class="close-btn" data-panel="online-users">&times;</span>
         Online Kullanıcılar: <span id="online-users-count">0</span>
     </div>
+    
     <div id="leaderboard-container" class="info-panel">
         <span class="close-btn" data-panel="leaderboard">&times;</span>
         <h3>🏆 En İyiler</h3>
@@ -97,7 +91,7 @@
 
     <main class="main-content">
         <div class="content-inner">
-            <h1>urplace</h1>
+            <h1>Urplace</h1>
             <div class="canvas-wrapper">
                 <canvas id="main-canvas" width="1920" height="1080"></canvas>
                 <canvas id="hover-canvas" width="1920" height="1080"></canvas>
@@ -106,6 +100,7 @@
     </main>
     
     <div id="tooltip"></div>
+
     <div class="controls">
         <div class="user-info">Kullanıcı: <strong id="username-display">...</strong></div>
         <div id="color-picker-container">
@@ -141,57 +136,51 @@
         const usernameInput = document.getElementById('username-input');
         const saveUsernameBtn = document.getElementById('save-username-btn');
         
+        const PIXEL_SIZE = 10;
+        const GRID_WIDTH = canvas.width / PIXEL_SIZE;
+        const GRID_HEIGHT = canvas.height / PIXEL_SIZE;
         let selectedColor = colorPicker.value;
         let username = '';
-        const COOLDOWN_SECONDS = 5;
+        const COOLDOWN_SECONDS = 2.3;
         
         const pixelDataMap = new Map();
         let channel;
 
         function getUniqueUserId(){let e=localStorage.getItem("unique_user_id");return e||(e=Date.now().toString(36)+Math.random().toString(36).substring(2),localStorage.setItem("unique_user_id",e)),e}
         const uniqueUserId = getUniqueUserId();
-
+        
         function setupColorPicker(){colorPicker.addEventListener("input",e=>{selectedColor=e.target.value})}
-        
+
         function setupClosablePanels(){document.querySelectorAll(".close-btn").forEach(e=>{e.addEventListener("click",t=>{const o=t.target.dataset.panel,n=document.getElementById(`${o}-container`);n&&(n.style.display="none",sessionStorage.setItem(`${o}Closed`,"true"))})}),"true"===sessionStorage.getItem("leaderboardClosed")&&(leaderboardContainer.style.display="none"),"true"===sessionStorage.getItem("online-usersClosed")&&(onlineUsersContainer.style.display="none")}
-        
+
         function handleUsername(){const e=localStorage.getItem("global_canvas_username");e?(username=e,usernameDisplay.textContent=username,usernameModal.style.display="none",init()):usernameModal.style.display="flex"}
         saveUsernameBtn.addEventListener("click",()=>{const e=usernameInput.value.trim();e&&(username=e,localStorage.setItem("global_canvas_username",username),usernameDisplay.textContent=username,usernameModal.style.display="none",init())});
         
-        function drawPixel(e,t,o){ctx.fillStyle=o,ctx.fillRect(e,t,1,1)}
+        function drawGridCell(e,t,o){ctx.fillStyle=o,ctx.fillRect(e*PIXEL_SIZE,t*PIXEL_SIZE,PIXEL_SIZE,PIXEL_SIZE)}
         
-        async function fetchInitialCanvas(){console.log("Mevcut pikseller çekiliyor..."),pixelDataMap.clear(),ctx.clearRect(0,0,canvas.width,canvas.height);const{data:e,error:t}=await supabaseClient.from("pixels").select("*");t?console.error("Pikselleri çekerken hata:",t):e.forEach(e=>{drawPixel(e.x,e.y,e.color);const t=`${e.x},${e.y}`;pixelDataMap.set(t,{username:e.username,color:e.color})}),console.log(`${e.length} piksel yüklendi.`)}
+        function drawInitialGrid(){ctx.clearRect(0,0,canvas.width,canvas.height);for(let e=0;e<GRID_WIDTH;e++)for(let t=0;t<GRID_HEIGHT;t++)ctx.fillStyle="#FFFFFF",ctx.fillRect(e*PIXEL_SIZE,t*PIXEL_SIZE,PIXEL_SIZE,PIXEL_SIZE),ctx.strokeStyle="#E0E0E0",ctx.strokeRect(e*PIXEL_SIZE,t*PIXEL_SIZE,PIXEL_SIZE,PIXEL_SIZE)}
+        
+        async function fetchInitialCanvas(){console.log("Mevcut pikseller çekiliyor..."),pixelDataMap.clear();const{data:e,error:t}=await supabaseClient.from("pixels").select("*");t?console.error("Pikselleri çekerken hata:",t):e.forEach(e=>{drawGridCell(e.x,e.y,e.color);const t=`${e.x},${e.y}`;pixelDataMap.set(t,{username:e.username,color:e.color})}),console.log(`${e.length} piksel yüklendi.`)}
         
         let cooldownInterval;
         function startCooldownTimer(){let e=COOLDOWN_SECONDS;localStorage.setItem("last_pixel_time",Date.now()),timerDisplay.textContent=`${e.toFixed(1)}s`,hoverCanvas.style.cursor="not-allowed",cooldownInterval=setInterval(()=>{e-=.1,e<=0?(clearInterval(cooldownInterval),timerDisplay.textContent="Hazır!",hoverCanvas.style.cursor="crosshair"):timerDisplay.textContent=`${e.toFixed(1)}s`},100)}
         function checkCooldown(){const e=localStorage.getItem("last_pixel_time");if(!e)return!0;const t=(Date.now()-parseInt(e))/1e3;if(t>=COOLDOWN_SECONDS)return!0;{const o=COOLDOWN_SECONDS-t;return startCooldownTimerFrom(o),!1}}
         function startCooldownTimerFrom(e){clearInterval(cooldownInterval);let t=e;timerDisplay.textContent=`${t.toFixed(1)}s`,hoverCanvas.style.cursor="not-allowed",cooldownInterval=setInterval(()=>{t-=.1,t<=0?(clearInterval(cooldownInterval),timerDisplay.textContent="Hazır!",hoverCanvas.style.cursor="crosshair"):timerDisplay.textContent=`${t.toFixed(1)}s`},100)}
         
-        hoverCanvas.addEventListener("mousemove",e=>{const t=hoverCanvas.getBoundingClientRect(),o=Math.floor(e.clientX-t.left),n=Math.floor(e.clientY-t.top);hoverCtx.clearRect(0,0,hoverCanvas.width,hoverCanvas.height),tooltip.style.display="none",hoverCtx.fillStyle=selectedColor,hoverCtx.fillRect(o,n,1,1);const s=`${o},${n}`;pixelDataMap.has(s)&&(tooltip.innerHTML=`(${o}, ${n})<br>Yapan: ${pixelDataMap.get(s).username}<br>Renk: ${pixelDataMap.get(s).color}`,tooltip.style.left=`${e.clientX+15}px`,tooltip.style.top=`${e.clientY+15}px`,tooltip.style.display="block")});
+        hoverCanvas.addEventListener("mousemove",e=>{const t=hoverCanvas.getBoundingClientRect(),o=e.clientX-t.left,n=e.clientY-t.top,s=Math.floor(o/PIXEL_SIZE),i=Math.floor(n/PIXEL_SIZE);if(hoverCtx.clearRect(0,0,hoverCanvas.width,hoverCanvas.height),tooltip.style.display="none",s>=0&&s<GRID_WIDTH&&i>=0&&i<GRID_HEIGHT){hoverCtx.fillStyle=selectedColor,hoverCtx.fillRect(s*PIXEL_SIZE,i*PIXEL_SIZE,PIXEL_SIZE,PIXEL_SIZE);const l=`${s},${i}`;pixelDataMap.has(l)&&(tooltip.innerHTML=`(${s}, ${i})<br>Yapan: ${pixelDataMap.get(l).username}<br>Renk: ${pixelDataMap.get(l).color}`,tooltip.style.left=`${e.clientX+15}px`,tooltip.style.top=`${e.clientY+15}px`,tooltip.style.display="block")}});
         hoverCanvas.addEventListener("mouseout",()=>{hoverCtx.clearRect(0,0,hoverCanvas.width,hoverCanvas.height),tooltip.style.display="none"});
         
         hoverCanvas.addEventListener("click",async e=>{
             if(!username)return void alert("Lütfen önce bir kullanıcı adı belirleyin.");
             if(!checkCooldown())return void alert("Lütfen bir sonraki piksel için bekleyin.");
+            const t=hoverCanvas.getBoundingClientRect(),o=e.clientX-t.left,n=e.clientY-t.top,s=Math.floor(o/PIXEL_SIZE),i=Math.floor(n/PIXEL_SIZE);
+            if(s<0||s>=GRID_WIDTH||i<0||i>=GRID_HEIGHT) return;
             
-            const rect = hoverCanvas.getBoundingClientRect(),
-                  x = Math.floor(e.clientX - rect.left),
-                  y = Math.floor(e.clientY - rect.top);
-
-            const originalColor = pixelDataMap.get(`${x},${y}`)?.color || '#FFFFFF';
-            drawPixel(x, y, '#CCCCCC');
-
-            const { error } = await supabaseClient
-                .from("pixels")
-                .upsert({ x: x, y: y, color: selectedColor, username: username }, { onConflict: "x,y" });
-
-            if(error){
-                console.error("Piksel gönderilemedi:", error);
-                drawPixel(x, y, '#FF0000');
-                setTimeout(() => { drawPixel(x, y, originalColor); }, 500);
-            } else {
-                startCooldownTimer();
-            }
+            const originalColor=pixelDataMap.get(`${s},${i}`)?.color||"#FFFFFF";
+            drawGridCell(s,i,"#CCCCCC");
+            
+            const{error:r}=await supabaseClient.from("pixels").upsert({x:s,y:i,color:selectedColor,username:username},{onConflict:"x,y"});
+            r?(console.error("Piksel gönderilemedi:",r),drawGridCell(s,i,"#FF0000"),setTimeout(()=>{drawGridCell(s,i,originalColor)},500)):startCooldownTimer()
         });
 
         async function updateLeaderboard(){const{data:e,error:t}=await supabaseClient.rpc("get_leaderboard");if(t)return void console.error("Liderlik tablosu alınamadı:",t);leaderboardList.innerHTML="",e&&e.forEach((e,t)=>{const o=document.createElement("li");o.innerHTML=`<span class="rank">${t+1}.</span><span class="username" title="${e.username}">${e.username}</span><span class="score">${e.pixel_count}</span>`,leaderboardList.appendChild(o)})}
@@ -200,35 +189,25 @@
         function subscribeToChanges(){
             if(channel) supabaseClient.removeChannel(channel);
             
-            channel = supabaseClient.channel("pixels_changes", { config: { presence: { key: uniqueUserId } } });
-
-            channel.on("postgres_changes", { event: "*", schema: "public", table: "pixels" }, e=>{
-                const { x: t, y: o, color: n, username: s } = e.new;
-                drawPixel(t, o, n);
-                const i = `${t},${o}`;
-                pixelDataMap.set(i, { username: s, color: n });
-            });
-
-            channel.on("presence", { event: "sync" }, () => { updateOnlineUsersDisplay(channel.presenceState()); });
-            channel.on("presence", { event: "join" }, () => { updateOnlineUsersDisplay(channel.presenceState()); });
-            channel.on("presence", { event: "leave" }, () => { updateOnlineUsersDisplay(channel.presenceState()); });
-
-            channel.subscribe(async e => {
-                if("SUBSCRIBED" === e) {
-                    await channel.track({ username: username, online_at: (new Date).toISOString() });
-                    console.log(`Kanala ${username} olarak (ID: ${uniqueUserId}) abone olundu.`);
-                }
-            });
+            channel=supabaseClient.channel("pixels_changes",{config:{presence:{key:uniqueUserId}}});
+            channel.on("postgres_changes",{event:"*",schema:"public",table:"pixels"},e=>{const{x:t,y:o,color:n,username:s}=e.new;drawGridCell(t,o,n);const i=`${t},${o}`;pixelDataMap.set(i,{username:s,color:n})});
+            
+            channel.on("presence",{event:"sync"},()=>{updateOnlineUsersDisplay(channel.presenceState())});
+            channel.on("presence",{event:"join"},()=>{updateOnlineUsersDisplay(channel.presenceState())});
+            channel.on("presence",{event:"leave"},()=>{updateOnlineUsersDisplay(channel.presenceState())});
+            
+            channel.subscribe(async e=>{if("SUBSCRIBED"===e)await channel.track({username:username,online_at:(new Date).toISOString()}),console.log(`Kanala ${username} olarak (ID: ${uniqueUserId}) abone olundu.`)});
         }
-
+        
         function init(){
             setupColorPicker();
             setupClosablePanels();
+            drawInitialGrid();
             fetchInitialCanvas();
             subscribeToChanges();
             checkCooldown();
             updateLeaderboard(); 
-            setInterval(updateLeaderboard, 30000);
+            setInterval(updateLeaderboard,30000);
         }
         
         handleUsername();
