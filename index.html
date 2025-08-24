@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Urplace</title>
+    <title>Uplace</title>
 
     <style>
         /* TEMEL SAYFA DÜZENİ */
@@ -69,18 +69,48 @@
         #online-users-container span {
             color: #28a745;
         }
+        
+        /* LİDERLİK TABLOSU KUTUSU */
+        #leaderboard-container {
+            position: fixed;
+            top: 15px;
+            left: 15px;
+            background-color: rgba(255, 255, 255, 0.9);
+            padding: 10px 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+            z-index: 1002;
+            width: 220px;
+        }
+        #leaderboard-container h3 {
+            margin: 0 0 10px 0;
+            text-align: center;
+            font-size: 1.1em;
+            border-bottom: 1px solid #ccc;
+            padding-bottom: 5px;
+        }
+        #leaderboard-list {
+            list-style-type: none;
+            padding: 0;
+            margin: 0;
+        }
+        #leaderboard-list li {
+            display: flex;
+            justify-content: space-between;
+            padding: 4px 0;
+            font-size: 0.9em;
+        }
+        #leaderboard-list li .rank { font-weight: bold; margin-right: 10px; }
+        #leaderboard-list li .username { flex-grow: 1; text-overflow: ellipsis; overflow: hidden; white-space: nowrap; }
+        #leaderboard-list li .score { font-weight: bold; color: #007bff; }
 
-        /* KONTROL PANELİ */
+        /* KONTROL PANELİ, MODAL, TOOLTIP */
         .controls{padding:10px 20px;background-color:#fff;border-top:1px solid #ccc;display:flex;justify-content:space-between;align-items:center;flex-shrink:0;z-index:10;box-sizing:border-box}
         .user-info,.timer-info{font-size:1.1em;margin:0 15px}
         #color-picker-container{display:flex;align-items:center;gap:10px}
         #color-picker{width:50px;height:40px;border:1px solid #ccc;border-radius:5px;cursor:pointer;padding:0}
         #color-picker-label{font-weight:bold}
-        
-        /* BİLGİ KUTUCUĞU (TOOLTIP) */
         #tooltip{position:fixed;display:none;background-color:rgba(0,0,0,.8);color:#fff;padding:8px 12px;border-radius:5px;font-size:.9em;pointer-events:none;z-index:1001;white-space:nowrap}
-        
-        /* MODAL (KULLANICI GİRİŞİ) */
         .modal-overlay{position:fixed;top:0;left:0;width:100%;height:100%;background-color:rgba(0,0,0,.7);display:flex;justify-content:center;align-items:center;z-index:1000}
         .modal-content{background-color:#fff;padding:30px;border-radius:10px;text-align:center}
         #username-input,#save-username-btn{font-size:1em;padding:10px;border-radius:5px}
@@ -100,9 +130,14 @@
     <div id="online-users-container">
         Online Kullanıcılar: <span id="online-users-count">0</span>
     </div>
+    
+    <div id="leaderboard-container">
+        <h3>🏆 En İyiler</h3>
+        <ol id="leaderboard-list"></ol>
+    </div>
 
     <main class="main-content">
-        <h1>Urplace</h1>
+        <h1>urplace</h1>
         <div class="canvas-wrapper">
             <canvas id="main-canvas" width="1920" height="1080"></canvas>
             <canvas id="hover-canvas" width="1920" height="1080"></canvas>
@@ -134,6 +169,7 @@
         const supabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
         // --- GLOBAL DEĞİŞKENLER ---
+        const leaderboardList = document.getElementById('leaderboard-list');
         const onlineUsersCount = document.getElementById('online-users-count');
         const canvas = document.getElementById('main-canvas');
         const ctx = canvas.getContext('2d');
@@ -153,7 +189,7 @@
         
         let selectedColor = colorPicker.value;
         let username = '';
-        const COOLDOWN_SECONDS = 1; 
+        const COOLDOWN_SECONDS = 1.5;
         
         const pixelDataMap = new Map();
         let channel;
@@ -235,17 +271,18 @@
         function startCooldownTimer() {
             let timeLeft = COOLDOWN_SECONDS;
             localStorage.setItem('last_pixel_time', Date.now());
-            timerDisplay.textContent = `${timeLeft}s`;
+            timerDisplay.textContent = `${timeLeft.toFixed(1)}s`;
             hoverCanvas.style.cursor = 'not-allowed';
             cooldownInterval = setInterval(() => {
-                timeLeft--;
-                timerDisplay.textContent = `${timeLeft}s`;
+                timeLeft -= 0.1;
                 if (timeLeft <= 0) {
                     clearInterval(cooldownInterval);
                     timerDisplay.textContent = 'Hazır!';
                     hoverCanvas.style.cursor = 'crosshair';
+                } else {
+                    timerDisplay.textContent = `${timeLeft.toFixed(1)}s`;
                 }
-            }, 1000);
+            }, 100);
         }
         function checkCooldown() {
             const lastPixelTime = localStorage.getItem('last_pixel_time');
@@ -254,7 +291,7 @@
             if (secondsPassed >= COOLDOWN_SECONDS) {
                 return true;
             } else {
-                const remaining = Math.ceil(COOLDOWN_SECONDS - secondsPassed);
+                const remaining = COOLDOWN_SECONDS - secondsPassed;
                 startCooldownTimerFrom(remaining);
                 return false;
             }
@@ -262,17 +299,18 @@
         function startCooldownTimerFrom(startTime) {
             clearInterval(cooldownInterval);
             let timeLeft = startTime;
-            timerDisplay.textContent = `${timeLeft}s`;
+            timerDisplay.textContent = `${timeLeft.toFixed(1)}s`;
             hoverCanvas.style.cursor = 'not-allowed';
             cooldownInterval = setInterval(() => {
-                timeLeft--;
-                timerDisplay.textContent = `${timeLeft}s`;
-                if (timeLeft <= 0) {
+                timeLeft -= 0.1;
+                 if (timeLeft <= 0) {
                     clearInterval(cooldownInterval);
                     timerDisplay.textContent = 'Hazır!';
                     hoverCanvas.style.cursor = 'crosshair';
+                } else {
+                    timerDisplay.textContent = `${timeLeft.toFixed(1)}s`;
                 }
-            }, 1000);
+            }, 100);
         }
         
         // --- OLAY DİNLEYİCİLERİ ---
@@ -315,38 +353,43 @@
             const gridY = Math.floor(screenY / PIXEL_SIZE);
 
             if (gridX < 0 || gridX >= GRID_WIDTH || gridY < 0 || gridY >= GRID_HEIGHT) return;
-
-            drawGridCell(gridX, gridY, selectedColor);
-            const key = `${gridX},${gridY}`;
-            pixelDataMap.set(key, { username: username, color: selectedColor });
-
+            
             const { error } = await supabaseClient
                 .from('pixels')
                 .upsert({ x: gridX, y: gridY, color: selectedColor, username: username }, { onConflict: 'x,y' });
 
             if (error) {
                 console.error("Piksel gönderilemedi:", error);
-                pixelDataMap.delete(key);
+                alert("Pikseliniz kaydedilemedi, lütfen tekrar deneyin.");
             } else {
                 startCooldownTimer();
             }
         });
         
-        // --- ONLİNE KULLANICI VE GÜNCELLEMELER ---
+        // --- ONLİNE KULLANICI, GÜNCELLEMELER VE LİDERLİK TABLOSU ---
+        async function updateLeaderboard() {
+            const { data, error } = await supabaseClient.rpc('get_leaderboard');
+            if (error) { console.error('Liderlik tablosu alınamadı:', error); return; }
+            leaderboardList.innerHTML = '';
+            if (data) {
+                data.forEach((user, index) => {
+                    const li = document.createElement('li');
+                    li.innerHTML = `<span class="rank">${index + 1}.</span><span class="username" title="${user.username}">${user.username}</span><span class="score">${user.pixel_count}</span>`;
+                    leaderboardList.appendChild(li);
+                });
+            }
+        }
+        
         function updateOnlineUsersDisplay(presenceState) {
             const userCount = Object.keys(presenceState).length;
             onlineUsersCount.textContent = userCount;
         }
 
         function subscribeToChanges() {
-            if (channel) {
-                supabaseClient.removeChannel(channel);
-            }
+            if (channel) { supabaseClient.removeChannel(channel); }
             
             channel = supabaseClient.channel('pixels_changes', {
-                config: {
-                    presence: { key: uniqueUserId },
-                },
+                config: { presence: { key: uniqueUserId } },
             });
 
             channel.on('postgres_changes', { event: '*', schema: 'public', table: 'pixels' }, (payload) => {
@@ -387,6 +430,9 @@
             fetchInitialCanvas();
             subscribeToChanges();
             checkCooldown();
+            
+            updateLeaderboard(); 
+            setInterval(updateLeaderboard, 30000);
         }
         
         handleUsername();
