@@ -27,24 +27,32 @@
         #main-canvas { background-color: #f0f0f0; z-index: 0; }
         #hover-canvas { background-color: transparent; cursor: crosshair; z-index: 1; }
         
-        /* BİLGİ PANELLERİ */
+        /* BİLGİ PANELLERİ VE BUTON */
         .info-panel {
             position: fixed; background-color: rgba(255, 255, 255, 0.9);
             padding: 10px 15px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.15);
             z-index: 1002; font-size: 1em; font-weight: bold;
         }
         
-        #online-users-container {
-            top: 15px; right: 15px;
-            cursor: pointer; /* Tıklanabilir olduğunu belirtir */
-            transition: background-color 0.2s;
+        #toggle-leaderboard-btn {
+            position: fixed;
+            top: 15px;
+            left: 15px;
+            z-index: 1003; /* Panelin üstünde kalması için */
+            width: 40px;
+            height: 40px;
+            font-size: 1.5em;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            background-color: white;
+            cursor: pointer;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
         }
-        #online-users-container:hover {
-             background-color: #f0f0f0;
-        }
+        
+        #online-users-container { top: 15px; right: 15px; }
         #online-users-container span { color: #28a745; }
         
-        #leaderboard-container { top: 15px; left: 15px; width: 220px; }
+        #leaderboard-container { top: 65px; left: 15px; width: 220px; }
         #leaderboard-container h3 { margin: 0 0 10px 0; text-align: center; font-size: 1.1em; border-bottom: 1px solid #ccc; padding-bottom: 5px; }
         #leaderboard-list { list-style-type: none; padding: 0; margin: 0; }
         #leaderboard-list li { display: flex; justify-content: space-between; padding: 4px 0; font-size: 0.9em; }
@@ -61,7 +69,8 @@
 
         /* MOBİL UYUM */
         @media (max-width: 768px) {
-            #leaderboard-container { width: 150px; padding: 8px; top: 10px; left: 10px; }
+            #toggle-leaderboard-btn { top: 10px; left: 10px; }
+            #leaderboard-container { width: 150px; padding: 8px; top: 60px; left: 10px; }
             #leaderboard-container h3 { font-size: 1em; margin-bottom: 5px;}
             #leaderboard-list li { font-size: 0.8em; }
             #online-users-container { top: 10px; right: 10px; padding: 8px 12px; }
@@ -74,20 +83,17 @@
 <body>
     
     <div id="username-modal" class="modal-overlay">
-        <div class="modal-content">
-            <h2>Hoş Geldin!</h2>
-            <p>Lütfen tuvali kullanmak için bir isim gir.</p>
-            <input type="text" id="username-input" placeholder="İsminiz..." maxlength="15">
-            <button id="save-username-btn">Kaydet ve Başla</button>
-        </div>
+        <!-- Modal İçeriği -->
     </div>
 
+    <button id="toggle-leaderboard-btn">🏆</button>
+    
     <div id="online-users-container" class="info-panel">
         Online Kullanıcılar: <span id="online-users-count">0</span>
     </div>
     
     <div id="leaderboard-container" class="info-panel">
-        <h3>🏆 En İyiler</h3>
+        <h3>En İyiler</h3>
         <ol id="leaderboard-list"></ol>
     </div>
 
@@ -102,14 +108,8 @@
     </main>
     
     <div id="tooltip"></div>
-
     <div class="controls">
-        <div class="user-info">Kullanıcı: <strong id="username-display">...</strong></div>
-        <div id="color-picker-container">
-            <label for="color-picker" id="color-picker-label">Renk Seç:</label>
-            <input type="color" id="color-picker" value="#FF0000">
-        </div>
-        <div class="timer-info">Kalan Süre: <strong id="timer-display">Hazır!</strong></div>
+        <!-- Kontrol Paneli İçeriği -->
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -122,8 +122,8 @@
         const supabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
         // --- GLOBAL DEĞİŞKENLER ---
+        const toggleLeaderboardBtn = document.getElementById('toggle-leaderboard-btn');
         const leaderboardContainer = document.getElementById('leaderboard-container');
-        const onlineUsersContainer = document.getElementById('online-users-container');
         const leaderboardList = document.getElementById('leaderboard-list');
         const onlineUsersCount = document.getElementById('online-users-count');
         const canvas = document.getElementById('main-canvas');
@@ -154,13 +154,13 @@
         
         function setupColorPicker(){colorPicker.addEventListener("input",e=>{selectedColor=e.target.value})}
 
-        function setupPanelToggle() {
+        function setupLeaderboardToggle() {
             const savedState = sessionStorage.getItem('leaderboardVisible');
             if (savedState === 'false') {
                 leaderboardContainer.style.display = 'none';
                 isLeaderboardVisible = false;
             }
-            onlineUsersContainer.addEventListener('click', () => {
+            toggleLeaderboardBtn.addEventListener('click', () => {
                 isLeaderboardVisible = !isLeaderboardVisible;
                 leaderboardContainer.style.display = isLeaderboardVisible ? 'block' : 'none';
                 sessionStorage.setItem('leaderboardVisible', isLeaderboardVisible);
@@ -215,7 +215,7 @@
         
         function init(){
             setupColorPicker();
-            setupPanelToggle();
+            setupLeaderboardToggle();
             drawInitialGrid();
             fetchInitialCanvas();
             subscribeToChanges();
@@ -224,6 +224,9 @@
             setInterval(updateLeaderboard,30000);
         }
         
+        document.querySelector("#username-modal .modal-content").innerHTML=`<h2>Hoş Geldin!</h2><p>Lütfen tuvali kullanmak için bir isim gir.</p><input type="text" id="username-input" placeholder="İsminiz..." maxlength="15"><button id="save-username-btn">Kaydet ve Başla</button>`;
+        document.querySelector(".controls").innerHTML=`<div class="user-info">Kullanıcı: <strong id="username-display">...</strong></div><div id="color-picker-container"><label for="color-picker" id="color-picker-label">Renk Seç:</label><input type="color" id="color-picker" value="#FF0000"></div><div class="timer-info">Kalan Süre: <strong id="timer-display">Hazır!</strong></div>`;
+
         handleUsername();
     </script>
 </body>
