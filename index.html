@@ -13,11 +13,18 @@
             display: flex; flex-direction: column;
             user-select: none;
         }
+        
         .main-content {
-            flex-grow: 1; display: flex; flex-direction: column;
-            justify-content: center; align-items: center; 
-            padding: 20px; box-sizing: border-box; overflow: auto;
+            flex-grow: 1;
+            overflow: auto; /* Tuvalin kaydırılabilmesini sağlar */
+            display: grid; /* Flexbox yerine Grid kullanıldı */
+            place-items: center; /* Hem dikey hem yatayda mükemmel ortalama */
         }
+        
+        .content-inner {
+            text-align: center;
+        }
+
         .canvas-wrapper {
             position: relative; width: 1920px; height: 1080px;
             box-shadow: 0 4px 12px rgba(0,0,0,0.2); flex-shrink: 0;
@@ -78,12 +85,10 @@
             <button id="save-username-btn">Kaydet ve Başla</button>
         </div>
     </div>
-
     <div id="online-users-container" class="info-panel">
         <span class="close-btn" data-panel="online-users">&times;</span>
         Online Kullanıcılar: <span id="online-users-count">0</span>
     </div>
-    
     <div id="leaderboard-container" class="info-panel">
         <span class="close-btn" data-panel="leaderboard">&times;</span>
         <h3>🏆 En İyiler</h3>
@@ -91,10 +96,12 @@
     </div>
 
     <main class="main-content">
-        <h1>urplace</h1>
-        <div class="canvas-wrapper">
-            <canvas id="main-canvas" width="1920" height="1080"></canvas>
-            <canvas id="hover-canvas" width="1920" height="1080"></canvas>
+        <div class="content-inner">
+            <h1>urplace</h1>
+            <div class="canvas-wrapper">
+                <canvas id="main-canvas" width="1920" height="1080"></canvas>
+                <canvas id="hover-canvas" width="1920" height="1080"></canvas>
+            </div>
         </div>
     </main>
     
@@ -136,7 +143,7 @@
         
         let selectedColor = colorPicker.value;
         let username = '';
-        const COOLDOWN_SECONDS = 5; // Güvenli olması için 5 saniyede tutuyoruz
+        const COOLDOWN_SECONDS = 5;
         
         const pixelDataMap = new Map();
         let channel;
@@ -223,9 +230,6 @@
             updateLeaderboard(); 
             setInterval(updateLeaderboard, 30000);
         }
-        
-        document.querySelector("#username-modal .modal-content").innerHTML=`<h2>Hoş Geldin!</h2><p>Lütfen tuvali kullanmak için bir isim gir.</p><input type="text" id="username-input" placeholder="İsminiz..." maxlength="15"><button id="save-username-btn">Kaydet ve Başla</button>`;
-        document.querySelector(".controls").innerHTML=`<div class="user-info">Kullanıcı: <strong id="username-display">...</strong></div><div id="color-picker-container"><label for="color-picker" id="color-picker-label">Renk Seç:</label><input type="color" id="color-picker" value="#FF0000"></div><div class="timer-info">Kalan Süre: <strong id="timer-display">Hazır!</strong></div>`;
         
         handleUsername();
     </script>
