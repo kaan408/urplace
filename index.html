@@ -47,6 +47,9 @@
             background-color: white;
             cursor: pointer;
             box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+            display: flex;
+            justify-content: center;
+            align-items: center;
         }
         
         #online-users-container { top: 15px; right: 15px; }
@@ -83,7 +86,12 @@
 <body>
     
     <div id="username-modal" class="modal-overlay">
-        <!-- Modal İçeriği -->
+        <div class="modal-content">
+            <h2>Hoş Geldin!</h2>
+            <p>Lütfen tuvali kullanmak için bir isim gir.</p>
+            <input type="text" id="username-input" placeholder="İsminiz..." maxlength="15">
+            <button id="save-username-btn">Kaydet ve Başla</button>
+        </div>
     </div>
 
     <button id="toggle-leaderboard-btn">🏆</button>
@@ -109,7 +117,12 @@
     
     <div id="tooltip"></div>
     <div class="controls">
-        <!-- Kontrol Paneli İçeriği -->
+        <div class="user-info">Kullanıcı: <strong id="username-display">...</strong></div>
+        <div id="color-picker-container">
+            <label for="color-picker" id="color-picker-label">Renk Seç:</label>
+            <input type="color" id="color-picker" value="#FF0000">
+        </div>
+        <div class="timer-info">Kalan Süre: <strong id="timer-display">Hazır!</strong></div>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -224,9 +237,6 @@
             setInterval(updateLeaderboard,30000);
         }
         
-        document.querySelector("#username-modal .modal-content").innerHTML=`<h2>Hoş Geldin!</h2><p>Lütfen tuvali kullanmak için bir isim gir.</p><input type="text" id="username-input" placeholder="İsminiz..." maxlength="15"><button id="save-username-btn">Kaydet ve Başla</button>`;
-        document.querySelector(".controls").innerHTML=`<div class="user-info">Kullanıcı: <strong id="username-display">...</strong></div><div id="color-picker-container"><label for="color-picker" id="color-picker-label">Renk Seç:</label><input type="color" id="color-picker" value="#FF0000"></div><div class="timer-info">Kalan Süre: <strong id="timer-display">Hazır!</strong></div>`;
-
         handleUsername();
     </script>
 </body>
