@@ -33,13 +33,17 @@
             padding: 10px 15px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.15);
             z-index: 1002; font-size: 1em; font-weight: bold;
         }
-        .info-panel .close-btn {
-            position: absolute; top: 2px; right: 5px; cursor: pointer;
-            font-size: 1.2em; color: #aaa;
+        
+        #online-users-container {
+            top: 15px; right: 15px;
+            cursor: pointer; /* Tıklanabilir olduğunu belirtir */
+            transition: background-color 0.2s;
         }
-        .info-panel .close-btn:hover { color: #333; }
-        #online-users-container { top: 15px; right: 15px; }
+        #online-users-container:hover {
+             background-color: #f0f0f0;
+        }
         #online-users-container span { color: #28a745; }
+        
         #leaderboard-container { top: 15px; left: 15px; width: 220px; }
         #leaderboard-container h3 { margin: 0 0 10px 0; text-align: center; font-size: 1.1em; border-bottom: 1px solid #ccc; padding-bottom: 5px; }
         #leaderboard-list { list-style-type: none; padding: 0; margin: 0; }
@@ -70,21 +74,14 @@
 <body>
     
     <div id="username-modal" class="modal-overlay">
-        <div class="modal-content">
-            <h2>Hoş Geldin!</h2>
-            <p>Lütfen tuvali kullanmak için bir isim gir.</p>
-            <input type="text" id="username-input" placeholder="İsminiz..." maxlength="15">
-            <button id="save-username-btn">Kaydet ve Başla</button>
-        </div>
+        <!-- Modal İçeriği -->
     </div>
 
     <div id="online-users-container" class="info-panel">
-        <span class="close-btn" data-panel="online-users">&times;</span>
         Online Kullanıcılar: <span id="online-users-count">0</span>
     </div>
     
     <div id="leaderboard-container" class="info-panel">
-        <span class="close-btn" data-panel="leaderboard">&times;</span>
         <h3>🏆 En İyiler</h3>
         <ol id="leaderboard-list"></ol>
     </div>
@@ -100,14 +97,8 @@
     </main>
     
     <div id="tooltip"></div>
-
     <div class="controls">
-        <div class="user-info">Kullanıcı: <strong id="username-display">...</strong></div>
-        <div id="color-picker-container">
-            <label for="color-picker" id="color-picker-label">Renk Seç:</label>
-            <input type="color" id="color-picker" value="#FF0000">
-        </div>
-        <div class="timer-info">Kalan Süre: <strong id="timer-display">Hazır!</strong></div>
+        <!-- Kontrol Paneli İçeriği -->
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -145,13 +136,29 @@
         
         const pixelDataMap = new Map();
         let channel;
+        let isLeaderboardVisible = true; // YENİ: Liderlik tablosunun durumunu tutar
 
         function getUniqueUserId(){let e=localStorage.getItem("unique_user_id");return e||(e=Date.now().toString(36)+Math.random().toString(36).substring(2),localStorage.setItem("unique_user_id",e)),e}
         const uniqueUserId = getUniqueUserId();
         
         function setupColorPicker(){colorPicker.addEventListener("input",e=>{selectedColor=e.target.value})}
 
-        function setupClosablePanels(){document.querySelectorAll(".close-btn").forEach(e=>{e.addEventListener("click",t=>{const o=t.target.dataset.panel,n=document.getElementById(`${o}-container`);n&&(n.style.display="none",sessionStorage.setItem(`${o}Closed`,"true"))})}),"true"===sessionStorage.getItem("leaderboardClosed")&&(leaderboardContainer.style.display="none"),"true"===sessionStorage.getItem("online-usersClosed")&&(onlineUsersContainer.style.display="none")}
+        // YENİ: Panel aç/kapa mantığı
+        function setupPanelToggle() {
+            // Sayfa yüklendiğinde önceki durumu kontrol et
+            const savedState = sessionStorage.getItem('leaderboardVisible');
+            if (savedState === 'false') {
+                leaderboardContainer.style.display = 'none';
+                isLeaderboardVisible = false;
+            }
+
+            // Online kullanıcılar paneline tıklama olayı ekle
+            onlineUsersContainer.addEventListener('click', () => {
+                isLeaderboardVisible = !isLeaderboardVisible; // Durumu tersine çevir
+                leaderboardContainer.style.display = isLeaderboardVisible ? 'block' : 'none';
+                sessionStorage.setItem('leaderboardVisible', isLeaderboardVisible); // Yeni durumu kaydet
+            });
+        }
 
         function handleUsername(){const e=localStorage.getItem("global_canvas_username");e?(username=e,usernameDisplay.textContent=username,usernameModal.style.display="none",init()):usernameModal.style.display="flex"}
         saveUsernameBtn.addEventListener("click",()=>{const e=usernameInput.value.trim();e&&(username=e,localStorage.setItem("global_canvas_username",username),usernameDisplay.textContent=username,usernameModal.style.display="none",init())});
@@ -201,7 +208,7 @@
         
         function init(){
             setupColorPicker();
-            setupClosablePanels();
+            setupPanelToggle(); // setupClosablePanels yerine bu geldi
             drawInitialGrid();
             fetchInitialCanvas();
             subscribeToChanges();
@@ -210,6 +217,9 @@
             setInterval(updateLeaderboard,30000);
         }
         
+        document.querySelector("#username-modal .modal-content").innerHTML=`<h2>Hoş Geldin!</h2><p>Lütfen tuvali kullanmak için bir isim gir.</p><input type="text" id="username-input" placeholder="İsminiz..." maxlength="15"><button id="save-username-btn">Kaydet ve Başla</button>`;
+        document.querySelector(".controls").innerHTML=`<div class="user-info">Kullanıcı: <strong id="username-display">...</strong></div><div id="color-picker-container"><label for="color-picker" id="color-picker-label">Renk Seç:</label><input type="color" id="color-picker" value="#FF0000"></div><div class="timer-info">Kalan Süre: <strong id="timer-display">Hazır!</strong></div>`;
+
         handleUsername();
     </script>
 </body>
