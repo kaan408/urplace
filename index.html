@@ -74,7 +74,12 @@
 <body>
     
     <div id="username-modal" class="modal-overlay">
-        <!-- Modal İçeriği -->
+        <div class="modal-content">
+            <h2>Hoş Geldin!</h2>
+            <p>Lütfen tuvali kullanmak için bir isim gir.</p>
+            <input type="text" id="username-input" placeholder="İsminiz..." maxlength="15">
+            <button id="save-username-btn">Kaydet ve Başla</button>
+        </div>
     </div>
 
     <div id="online-users-container" class="info-panel">
@@ -97,8 +102,14 @@
     </main>
     
     <div id="tooltip"></div>
+
     <div class="controls">
-        <!-- Kontrol Paneli İçeriği -->
+        <div class="user-info">Kullanıcı: <strong id="username-display">...</strong></div>
+        <div id="color-picker-container">
+            <label for="color-picker" id="color-picker-label">Renk Seç:</label>
+            <input type="color" id="color-picker" value="#FF0000">
+        </div>
+        <div class="timer-info">Kalan Süre: <strong id="timer-display">Hazır!</strong></div>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -136,27 +147,23 @@
         
         const pixelDataMap = new Map();
         let channel;
-        let isLeaderboardVisible = true; // YENİ: Liderlik tablosunun durumunu tutar
+        let isLeaderboardVisible = true;
 
         function getUniqueUserId(){let e=localStorage.getItem("unique_user_id");return e||(e=Date.now().toString(36)+Math.random().toString(36).substring(2),localStorage.setItem("unique_user_id",e)),e}
         const uniqueUserId = getUniqueUserId();
         
         function setupColorPicker(){colorPicker.addEventListener("input",e=>{selectedColor=e.target.value})}
 
-        // YENİ: Panel aç/kapa mantığı
         function setupPanelToggle() {
-            // Sayfa yüklendiğinde önceki durumu kontrol et
             const savedState = sessionStorage.getItem('leaderboardVisible');
             if (savedState === 'false') {
                 leaderboardContainer.style.display = 'none';
                 isLeaderboardVisible = false;
             }
-
-            // Online kullanıcılar paneline tıklama olayı ekle
             onlineUsersContainer.addEventListener('click', () => {
-                isLeaderboardVisible = !isLeaderboardVisible; // Durumu tersine çevir
+                isLeaderboardVisible = !isLeaderboardVisible;
                 leaderboardContainer.style.display = isLeaderboardVisible ? 'block' : 'none';
-                sessionStorage.setItem('leaderboardVisible', isLeaderboardVisible); // Yeni durumu kaydet
+                sessionStorage.setItem('leaderboardVisible', isLeaderboardVisible);
             });
         }
 
@@ -208,7 +215,7 @@
         
         function init(){
             setupColorPicker();
-            setupPanelToggle(); // setupClosablePanels yerine bu geldi
+            setupPanelToggle();
             drawInitialGrid();
             fetchInitialCanvas();
             subscribeToChanges();
@@ -217,9 +224,6 @@
             setInterval(updateLeaderboard,30000);
         }
         
-        document.querySelector("#username-modal .modal-content").innerHTML=`<h2>Hoş Geldin!</h2><p>Lütfen tuvali kullanmak için bir isim gir.</p><input type="text" id="username-input" placeholder="İsminiz..." maxlength="15"><button id="save-username-btn">Kaydet ve Başla</button>`;
-        document.querySelector(".controls").innerHTML=`<div class="user-info">Kullanıcı: <strong id="username-display">...</strong></div><div id="color-picker-container"><label for="color-picker" id="color-picker-label">Renk Seç:</label><input type="color" id="color-picker" value="#FF0000"></div><div class="timer-info">Kalan Süre: <strong id="timer-display">Hazır!</strong></div>`;
-
         handleUsername();
     </script>
 </body>
