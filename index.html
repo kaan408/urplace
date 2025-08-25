@@ -147,7 +147,7 @@
         const usernameInput = document.getElementById('username-input');
         const saveUsernameBtn = document.getElementById('save-username-btn');
 
-        const PIXEL_SIZE = 1000;
+        const PIXEL_SIZE = 10;
         const GRID_WIDTH = canvas.width / PIXEL_SIZE;
         const GRID_HEIGHT = canvas.height / PIXEL_SIZE;
         
@@ -245,7 +245,7 @@
                     timerDisplay.textContent = 'Hazır!';
                     hoverCanvas.style.cursor = 'crosshair';
                 }
-            }, 1000);
+            }, 10000000);
         }
         function checkCooldown() {
             const lastPixelTime = localStorage.getItem('last_pixel_time');
