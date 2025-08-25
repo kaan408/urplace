@@ -2,85 +2,88 @@
 <html lang="tr">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Urplace</title>
 
     <style>
         /* TEMEL SAYFA DÜZENİ */
         html, body {
-            height: 100%; margin: 0; overflow: hidden; 
-            background-color: #DADDE1; font-family: Arial, sans-serif;
-            display: flex; flex-direction: column;
-            user-select: none;
+            height: 100%;
+            margin: 0;
+            overflow: hidden; 
+            background-color: #DADDE1; 
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
         }
+
         .main-content {
-            flex-grow: 1; display: grid; place-items: center; overflow: auto;
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center; 
+            align-items: center; 
+            padding: 20px;
+            box-sizing: border-box;
+            overflow: auto;
         }
-        .content-inner { text-align: center; }
+        
         .canvas-wrapper {
-            position: relative; width: 1920px; height: 1080px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.2); flex-shrink: 0;
+            position: relative;
+            width: 1920px;
+            height: 1080px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2); 
         }
+
         .canvas-wrapper canvas {
-            position: absolute; top: 0; left: 0; border: 2px solid #333;
+            position: absolute;
+            top: 0;
+            left: 0;
+            border: 2px solid #333;
         }
-        #main-canvas { background-color: #f0f0f0; z-index: 0; }
-        #hover-canvas { background-color: transparent; cursor: crosshair; z-index: 1; }
-        
-        /* BİLGİ PANELLERİ VE BUTON */
-        .info-panel {
-            position: fixed; background-color: rgba(255, 255, 255, 0.9);
-            padding: 10px 15px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.15);
-            z-index: 1002; font-size: 1em; font-weight: bold;
+
+        #main-canvas {
+            background-color: #f0f0f0;
+            z-index: 0; 
         }
         
-        #toggle-leaderboard-btn {
+        #hover-canvas {
+            background-color: transparent;
+            cursor: crosshair;
+            z-index: 1; 
+        }
+
+        /* ONLİNE KULLANICILAR KUTUSU */
+        #online-users-container {
             position: fixed;
             top: 15px;
-            left: 15px;
-            z-index: 1003; /* Panelin üstünde kalması için */
-            width: 40px;
-            height: 40px;
-            font-size: 1.5em;
-            border: 1px solid #ccc;
+            right: 15px;
+            background-color: rgba(255, 255, 255, 0.9);
+            padding: 10px 15px;
             border-radius: 8px;
-            background-color: white;
-            cursor: pointer;
             box-shadow: 0 2px 8px rgba(0,0,0,0.15);
-            display: flex;
-            justify-content: center;
-            align-items: center;
+            z-index: 1002;
+            font-size: 1em;
+            font-weight: bold;
         }
-        
-        #online-users-container { top: 15px; right: 15px; }
-        #online-users-container span { color: #28a745; }
-        
-        #leaderboard-container { top: 65px; left: 15px; width: 220px; }
-        #leaderboard-container h3 { margin: 0 0 10px 0; text-align: center; font-size: 1.1em; border-bottom: 1px solid #ccc; padding-bottom: 5px; }
-        #leaderboard-list { list-style-type: none; padding: 0; margin: 0; }
-        #leaderboard-list li { display: flex; justify-content: space-between; padding: 4px 0; font-size: 0.9em; }
-        #leaderboard-list li .rank { font-weight: bold; margin-right: 10px; }
-        #leaderboard-list li .username { flex-grow: 1; text-overflow: ellipsis; overflow: hidden; white-space: nowrap; }
-        #leaderboard-list li .score { font-weight: bold; color: #007bff; }
+        #online-users-container span {
+            color: #28a745;
+        }
 
-        /* KONTROL PANELİ, MODAL, TOOLTIP */
-        .controls{padding:8px;background-color:#fff;border-top:1px solid #ccc;display:flex;justify-content:space-around;align-items:center;flex-shrink:0;z-index:10;box-sizing:border-box}
-        .user-info,.timer-info{font-size:1em;margin:0 5px}#color-picker-container{display:flex;align-items:center;gap:8px}#color-picker{width:40px;height:30px;border:1px solid #ccc;border-radius:5px;cursor:pointer;padding:0}
-        #color-picker-label{font-weight:bold}#tooltip{position:fixed;display:none;background-color:rgba(0,0,0,.8);color:#fff;padding:8px 12px;border-radius:5px;font-size:.9em;pointer-events:none;z-index:1001;white-space:nowrap}
+        /* KONTROL PANELİ */
+        .controls{padding:10px 20px;background-color:#fff;border-top:1px solid #ccc;display:flex;justify-content:space-between;align-items:center;flex-shrink:0;z-index:10;box-sizing:border-box}
+        .user-info,.timer-info{font-size:1.1em;margin:0 15px}
+        #color-picker-container{display:flex;align-items:center;gap:10px}
+        #color-picker{width:50px;height:40px;border:1px solid #ccc;border-radius:5px;cursor:pointer;padding:0}
+        #color-picker-label{font-weight:bold}
+        
+        /* BİLGİ KUTUCUĞU (TOOLTIP) */
+        #tooltip{position:fixed;display:none;background-color:rgba(0,0,0,.8);color:#fff;padding:8px 12px;border-radius:5px;font-size:.9em;pointer-events:none;z-index:1001;white-space:nowrap}
+        
+        /* MODAL (KULLANICI GİRİŞİ) */
         .modal-overlay{position:fixed;top:0;left:0;width:100%;height:100%;background-color:rgba(0,0,0,.7);display:flex;justify-content:center;align-items:center;z-index:1000}
-        .modal-content{background-color:#fff;padding:30px;border-radius:10px;text-align:center}#username-input,#save-username-btn{font-size:1em;padding:10px;border-radius:5px}
-
-        /* MOBİL UYUM */
-        @media (max-width: 768px) {
-            #toggle-leaderboard-btn { top: 10px; left: 10px; }
-            #leaderboard-container { width: 150px; padding: 8px; top: 60px; left: 10px; }
-            #leaderboard-container h3 { font-size: 1em; margin-bottom: 5px;}
-            #leaderboard-list li { font-size: 0.8em; }
-            #online-users-container { top: 10px; right: 10px; padding: 8px 12px; }
-            .controls { flex-wrap: wrap; justify-content: center; padding: 5px;}
-            .timer-info { margin-top: 5px; }
-            h1 { font-size: 1.5em; }
-        }
+        .modal-content{background-color:#fff;padding:30px;border-radius:10px;text-align:center}
+        #username-input,#save-username-btn{font-size:1em;padding:10px;border-radius:5px}
     </style>
 </head>
 <body>
@@ -94,35 +97,31 @@
         </div>
     </div>
 
-    <button id="toggle-leaderboard-btn">🏆</button>
-    
-    <div id="online-users-container" class="info-panel">
+    <div id="online-users-container">
         Online Kullanıcılar: <span id="online-users-count">0</span>
-    </div>
-    
-    <div id="leaderboard-container" class="info-panel">
-        <h3>En İyiler</h3>
-        <ol id="leaderboard-list"></ol>
     </div>
 
     <main class="main-content">
-        <div class="content-inner">
-            <h1>Urplace</h1>
-            <div class="canvas-wrapper">
-                <canvas id="main-canvas" width="1920" height="1080"></canvas>
-                <canvas id="hover-canvas" width="1920" height="1080"></canvas>
-            </div>
+        <h1>Urplace</h1>
+        <div class="canvas-wrapper">
+            <canvas id="main-canvas" width="1920" height="1080"></canvas>
+            <canvas id="hover-canvas" width="1920" height="1080"></canvas>
         </div>
     </main>
     
     <div id="tooltip"></div>
+
     <div class="controls">
-        <div class="user-info">Kullanıcı: <strong id="username-display">...</strong></div>
+        <div class="user-info">
+            Kullanıcı: <strong id="username-display">...</strong>
+        </div>
         <div id="color-picker-container">
             <label for="color-picker" id="color-picker-label">Renk Seç:</label>
             <input type="color" id="color-picker" value="#FF0000">
         </div>
-        <div class="timer-info">Kalan Süre: <strong id="timer-display">Hazır!</strong></div>
+        <div class="timer-info">
+            Kalan Süre: <strong id="timer-display">Hazır!</strong>
+        </div>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -135,9 +134,6 @@
         const supabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
         // --- GLOBAL DEĞİŞKENLER ---
-        const toggleLeaderboardBtn = document.getElementById('toggle-leaderboard-btn');
-        const leaderboardContainer = document.getElementById('leaderboard-container');
-        const leaderboardList = document.getElementById('leaderboard-list');
         const onlineUsersCount = document.getElementById('online-users-count');
         const canvas = document.getElementById('main-canvas');
         const ctx = canvas.getContext('2d');
@@ -150,91 +146,247 @@
         const usernameModal = document.getElementById('username-modal');
         const usernameInput = document.getElementById('username-input');
         const saveUsernameBtn = document.getElementById('save-username-btn');
-        
-        const PIXEL_SIZE = 10;
+
+        const PIXEL_SIZE = 1000;
         const GRID_WIDTH = canvas.width / PIXEL_SIZE;
         const GRID_HEIGHT = canvas.height / PIXEL_SIZE;
+        
         let selectedColor = colorPicker.value;
         let username = '';
-        const COOLDOWN_SECONDS = 2.3;
+        const COOLDOWN_SECONDS = 2; 
         
         const pixelDataMap = new Map();
         let channel;
-        let isLeaderboardVisible = true;
 
-        function getUniqueUserId(){let e=localStorage.getItem("unique_user_id");return e||(e=Date.now().toString(36)+Math.random().toString(36).substring(2),localStorage.setItem("unique_user_id",e)),e}
-        const uniqueUserId = getUniqueUserId();
-        
-        function setupColorPicker(){colorPicker.addEventListener("input",e=>{selectedColor=e.target.value})}
-
-        function setupLeaderboardToggle() {
-            const savedState = sessionStorage.getItem('leaderboardVisible');
-            if (savedState === 'false') {
-                leaderboardContainer.style.display = 'none';
-                isLeaderboardVisible = false;
+        function getUniqueUserId() {
+            let userId = localStorage.getItem('unique_user_id');
+            if (!userId) {
+                userId = Date.now().toString(36) + Math.random().toString(36).substring(2);
+                localStorage.setItem('unique_user_id', userId);
             }
-            toggleLeaderboardBtn.addEventListener('click', () => {
-                isLeaderboardVisible = !isLeaderboardVisible;
-                leaderboardContainer.style.display = isLeaderboardVisible ? 'block' : 'none';
-                sessionStorage.setItem('leaderboardVisible', isLeaderboardVisible);
+            return userId;
+        }
+        const uniqueUserId = getUniqueUserId();
+
+        // --- KURULUM FONKSİYONLARI ---
+        function setupColorPicker() {
+            colorPicker.addEventListener('input', (e) => {
+                selectedColor = e.target.value;
+            });
+        }
+        
+        // --- KULLANICI İSMİ YÖNETİMİ ---
+        function handleUsername() {
+            const savedUsername = localStorage.getItem('global_canvas_username');
+            if (savedUsername) {
+                username = savedUsername;
+                usernameDisplay.textContent = username;
+                usernameModal.style.display = 'none';
+                init(); 
+            } else {
+                usernameModal.style.display = 'flex';
+            }
+        }
+        saveUsernameBtn.addEventListener('click', () => {
+            const name = usernameInput.value.trim();
+            if (name) {
+                username = name;
+                localStorage.setItem('global_canvas_username', username);
+                usernameDisplay.textContent = username;
+                usernameModal.style.display = 'none';
+                init(); 
+            }
+        });
+        
+        // --- TUVAL VE TABLO ÇİZİMİ ---
+        function drawGridCell(gridX, gridY, color) {
+            ctx.fillStyle = color;
+            ctx.fillRect(gridX * PIXEL_SIZE, gridY * PIXEL_SIZE, PIXEL_SIZE, PIXEL_SIZE);
+        }
+        function drawInitialGrid() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            for (let x = 0; x < GRID_WIDTH; x++) {
+                for (let y = 0; y < GRID_HEIGHT; y++) {
+                    ctx.fillStyle = '#FFFFFF';
+                    ctx.fillRect(x * PIXEL_SIZE, y * PIXEL_SIZE, PIXEL_SIZE, PIXEL_SIZE);
+                    ctx.strokeStyle = '#E0E0E0';
+                    ctx.strokeRect(x * PIXEL_SIZE, y * PIXEL_SIZE, PIXEL_SIZE, PIXEL_SIZE);
+                }
+            }
+        }
+        async function fetchInitialCanvas() {
+            console.log("Mevcut pikseller çekiliyor...");
+            pixelDataMap.clear();
+            const { data, error } = await supabaseClient.from('pixels').select('*');
+            if (error) {
+                console.error("Pikselleri çekerken hata:", error);
+            } else {
+                data.forEach(pixel => {
+                    drawGridCell(pixel.x, pixel.y, pixel.color);
+                    const key = `${pixel.x},${pixel.y}`;
+                    pixelDataMap.set(key, { username: pixel.username, color: pixel.color });
+                });
+                console.log(`${data.length} piksel yüklendi.`);
+            }
+        }
+        
+        // --- ZAMANLAYICI ---
+        let cooldownInterval;
+        function startCooldownTimer() {
+            let timeLeft = COOLDOWN_SECONDS;
+            localStorage.setItem('last_pixel_time', Date.now());
+            timerDisplay.textContent = `${timeLeft}s`;
+            hoverCanvas.style.cursor = 'not-allowed';
+            cooldownInterval = setInterval(() => {
+                timeLeft--;
+                timerDisplay.textContent = `${timeLeft}s`;
+                if (timeLeft <= 0) {
+                    clearInterval(cooldownInterval);
+                    timerDisplay.textContent = 'Hazır!';
+                    hoverCanvas.style.cursor = 'crosshair';
+                }
+            }, 1000);
+        }
+        function checkCooldown() {
+            const lastPixelTime = localStorage.getItem('last_pixel_time');
+            if (!lastPixelTime) return true; 
+            const secondsPassed = (Date.now() - parseInt(lastPixelTime)) / 1000;
+            if (secondsPassed >= COOLDOWN_SECONDS) {
+                return true;
+            } else {
+                const remaining = Math.ceil(COOLDOWN_SECONDS - secondsPassed);
+                startCooldownTimerFrom(remaining);
+                return false;
+            }
+        }
+        function startCooldownTimerFrom(startTime) {
+            clearInterval(cooldownInterval);
+            let timeLeft = startTime;
+            timerDisplay.textContent = `${timeLeft}s`;
+            hoverCanvas.style.cursor = 'not-allowed';
+            cooldownInterval = setInterval(() => {
+                timeLeft--;
+                timerDisplay.textContent = `${timeLeft}s`;
+                if (timeLeft <= 0) {
+                    clearInterval(cooldownInterval);
+                    timerDisplay.textContent = 'Hazır!';
+                    hoverCanvas.style.cursor = 'crosshair';
+                }
+            }, 1000);
+        }
+        
+        // --- OLAY DİNLEYİCİLERİ ---
+        hoverCanvas.addEventListener('mousemove', (e) => {
+            const rect = hoverCanvas.getBoundingClientRect();
+            const screenX = e.clientX - rect.left;
+            const screenY = e.clientY - rect.top;
+            const gridX = Math.floor(screenX / PIXEL_SIZE);
+            const gridY = Math.floor(screenY / PIXEL_SIZE);
+
+            hoverCtx.clearRect(0, 0, hoverCanvas.width, hoverCanvas.height);
+            tooltip.style.display = 'none';
+
+            if (gridX >= 0 && gridX < GRID_WIDTH && gridY >= 0 && gridY < GRID_HEIGHT) {
+                hoverCtx.fillStyle = selectedColor;
+                hoverCtx.fillRect(gridX * PIXEL_SIZE, gridY * PIXEL_SIZE, PIXEL_SIZE, PIXEL_SIZE);
+                
+                const key = `${gridX},${gridY}`;
+                if (pixelDataMap.has(key)) {
+                    const data = pixelDataMap.get(key);
+                    tooltip.innerHTML = `(${gridX}, ${gridY})<br>Yapan: ${data.username}<br>Renk: ${data.color}`;
+                    tooltip.style.left = `${e.clientX + 15}px`;
+                    tooltip.style.top = `${e.clientY + 15}px`;
+                    tooltip.style.display = 'block';
+                }
+            }
+        });
+        hoverCanvas.addEventListener('mouseout', () => {
+            hoverCtx.clearRect(0, 0, hoverCanvas.width, hoverCanvas.height);
+            tooltip.style.display = 'none';
+        });
+        hoverCanvas.addEventListener('click', async (e) => {
+            if (!username) { alert("Lütfen önce bir kullanıcı adı belirleyin."); return; }
+            if (!checkCooldown()) { alert("Lütfen bir sonraki piksel için bekleyin."); return; }
+            
+            const rect = hoverCanvas.getBoundingClientRect();
+            const screenX = e.clientX - rect.left;
+            const screenY = e.clientY - rect.top;
+            const gridX = Math.floor(screenX / PIXEL_SIZE);
+            const gridY = Math.floor(screenY / PIXEL_SIZE);
+
+            if (gridX < 0 || gridX >= GRID_WIDTH || gridY < 0 || gridY >= GRID_HEIGHT) return;
+
+            drawGridCell(gridX, gridY, selectedColor);
+            const key = `${gridX},${gridY}`;
+            pixelDataMap.set(key, { username: username, color: selectedColor });
+
+            const { error } = await supabaseClient
+                .from('pixels')
+                .upsert({ x: gridX, y: gridY, color: selectedColor, username: username }, { onConflict: 'x,y' });
+
+            if (error) {
+                console.error("Piksel gönderilemedi:", error);
+                pixelDataMap.delete(key);
+            } else {
+                startCooldownTimer();
+            }
+        });
+        
+        // --- ONLİNE KULLANICI VE GÜNCELLEMELER ---
+        function updateOnlineUsersDisplay(presenceState) {
+            const userCount = Object.keys(presenceState).length;
+            onlineUsersCount.textContent = userCount;
+        }
+
+        function subscribeToChanges() {
+            if (channel) {
+                supabaseClient.removeChannel(channel);
+            }
+            
+            channel = supabaseClient.channel('pixels_changes', {
+                config: {
+                    presence: { key: uniqueUserId },
+                },
+            });
+
+            channel.on('postgres_changes', { event: '*', schema: 'public', table: 'pixels' }, (payload) => {
+                const { x, y, color, username: pixelOwner } = payload.new;
+                drawGridCell(x, y, color);
+                const key = `${x},${y}`;
+                pixelDataMap.set(key, { username: pixelOwner, color: color });
+            });
+
+            channel.on('presence', { event: 'sync' }, () => {
+                const presenceState = channel.presenceState();
+                updateOnlineUsersDisplay(presenceState);
+            });
+            channel.on('presence', { event: 'join' }, () => {
+                const presenceState = channel.presenceState();
+                updateOnlineUsersDisplay(presenceState);
+            });
+            channel.on('presence', { event: 'leave' }, () => {
+                const presenceState = channel.presenceState();
+                updateOnlineUsersDisplay(presenceState);
+            });
+
+            channel.subscribe(async (status) => {
+                if (status === 'SUBSCRIBED') {
+                    await channel.track({ 
+                        username: username, 
+                        online_at: new Date().toISOString() 
+                    });
+                    console.log(`Kanala ${username} olarak (ID: ${uniqueUserId}) abone olundu.`);
+                }
             });
         }
 
-        function handleUsername(){const e=localStorage.getItem("global_canvas_username");e?(username=e,usernameDisplay.textContent=username,usernameModal.style.display="none",init()):usernameModal.style.display="flex"}
-        saveUsernameBtn.addEventListener("click",()=>{const e=usernameInput.value.trim();e&&(username=e,localStorage.setItem("global_canvas_username",username),usernameDisplay.textContent=username,usernameModal.style.display="none",init())});
-        
-        function drawGridCell(e,t,o){ctx.fillStyle=o,ctx.fillRect(e*PIXEL_SIZE,t*PIXEL_SIZE,PIXEL_SIZE,PIXEL_SIZE)}
-        
-        function drawInitialGrid(){ctx.clearRect(0,0,canvas.width,canvas.height);for(let e=0;e<GRID_WIDTH;e++)for(let t=0;t<GRID_HEIGHT;t++)ctx.fillStyle="#FFFFFF",ctx.fillRect(e*PIXEL_SIZE,t*PIXEL_SIZE,PIXEL_SIZE,PIXEL_SIZE),ctx.strokeStyle="#E0E0E0",ctx.strokeRect(e*PIXEL_SIZE,t*PIXEL_SIZE,PIXEL_SIZE,PIXEL_SIZE)}
-        
-        async function fetchInitialCanvas(){console.log("Mevcut pikseller çekiliyor..."),pixelDataMap.clear();const{data:e,error:t}=await supabaseClient.from("pixels").select("*");t?console.error("Pikselleri çekerken hata:",t):e.forEach(e=>{drawGridCell(e.x,e.y,e.color);const t=`${e.x},${e.y}`;pixelDataMap.set(t,{username:e.username,color:e.color})}),console.log(`${e.length} piksel yüklendi.`)}
-        
-        let cooldownInterval;
-        function startCooldownTimer(){let e=COOLDOWN_SECONDS;localStorage.setItem("last_pixel_time",Date.now()),timerDisplay.textContent=`${e.toFixed(1)}s`,hoverCanvas.style.cursor="not-allowed",cooldownInterval=setInterval(()=>{e-=.1,e<=0?(clearInterval(cooldownInterval),timerDisplay.textContent="Hazır!",hoverCanvas.style.cursor="crosshair"):timerDisplay.textContent=`${e.toFixed(1)}s`},100)}
-        function checkCooldown(){const e=localStorage.getItem("last_pixel_time");if(!e)return!0;const t=(Date.now()-parseInt(e))/1e3;if(t>=COOLDOWN_SECONDS)return!0;{const o=COOLDOWN_SECONDS-t;return startCooldownTimerFrom(o),!1}}
-        function startCooldownTimerFrom(e){clearInterval(cooldownInterval);let t=e;timerDisplay.textContent=`${t.toFixed(1)}s`,hoverCanvas.style.cursor="not-allowed",cooldownInterval=setInterval(()=>{t-=.1,t<=0?(clearInterval(cooldownInterval),timerDisplay.textContent="Hazır!",hoverCanvas.style.cursor="crosshair"):timerDisplay.textContent=`${t.toFixed(1)}s`},100)}
-        
-        hoverCanvas.addEventListener("mousemove",e=>{const t=hoverCanvas.getBoundingClientRect(),o=e.clientX-t.left,n=e.clientY-t.top,s=Math.floor(o/PIXEL_SIZE),i=Math.floor(n/PIXEL_SIZE);if(hoverCtx.clearRect(0,0,hoverCanvas.width,hoverCanvas.height),tooltip.style.display="none",s>=0&&s<GRID_WIDTH&&i>=0&&i<GRID_HEIGHT){hoverCtx.fillStyle=selectedColor,hoverCtx.fillRect(s*PIXEL_SIZE,i*PIXEL_SIZE,PIXEL_SIZE,PIXEL_SIZE);const l=`${s},${i}`;pixelDataMap.has(l)&&(tooltip.innerHTML=`(${s}, ${i})<br>Yapan: ${pixelDataMap.get(l).username}<br>Renk: ${pixelDataMap.get(l).color}`,tooltip.style.left=`${e.clientX+15}px`,tooltip.style.top=`${e.clientY+15}px`,tooltip.style.display="block")}});
-        hoverCanvas.addEventListener("mouseout",()=>{hoverCtx.clearRect(0,0,hoverCanvas.width,hoverCanvas.height),tooltip.style.display="none"});
-        
-        hoverCanvas.addEventListener("click",async e=>{
-            if(!username)return void alert("Lütfen önce bir kullanıcı adı belirleyin.");
-            if(!checkCooldown())return void alert("Lütfen bir sonraki piksel için bekleyin.");
-            const t=hoverCanvas.getBoundingClientRect(),o=e.clientX-t.left,n=e.clientY-t.top,s=Math.floor(o/PIXEL_SIZE),i=Math.floor(n/PIXEL_SIZE);
-            if(s<0||s>=GRID_WIDTH||i<0||i>=GRID_HEIGHT) return;
-            
-            const originalColor=pixelDataMap.get(`${s},${i}`)?.color||"#FFFFFF";
-            drawGridCell(s,i,"#CCCCCC");
-            
-            const{error:r}=await supabaseClient.from("pixels").upsert({x:s,y:i,color:selectedColor,username:username},{onConflict:"x,y"});
-            r?(console.error("Piksel gönderilemedi:",r),drawGridCell(s,i,"#FF0000"),setTimeout(()=>{drawGridCell(s,i,originalColor)},500)):startCooldownTimer()
-        });
-
-        async function updateLeaderboard(){const{data:e,error:t}=await supabaseClient.rpc("get_leaderboard");if(t)return void console.error("Liderlik tablosu alınamadı:",t);leaderboardList.innerHTML="",e&&e.forEach((e,t)=>{const o=document.createElement("li");o.innerHTML=`<span class="rank">${t+1}.</span><span class="username" title="${e.username}">${e.username}</span><span class="score">${e.pixel_count}</span>`,leaderboardList.appendChild(o)})}
-        function updateOnlineUsersDisplay(e){const t=Object.keys(e).length;onlineUsersCount.textContent=t}
-        
-        function subscribeToChanges(){
-            if(channel) supabaseClient.removeChannel(channel);
-            
-            channel=supabaseClient.channel("pixels_changes",{config:{presence:{key:uniqueUserId}}});
-            channel.on("postgres_changes",{event:"*",schema:"public",table:"pixels"},e=>{const{x:t,y:o,color:n,username:s}=e.new;drawGridCell(t,o,n);const i=`${t},${o}`;pixelDataMap.set(i,{username:s,color:n})});
-            
-            channel.on("presence",{event:"sync"},()=>{updateOnlineUsersDisplay(channel.presenceState())});
-            channel.on("presence",{event:"join"},()=>{updateOnlineUsersDisplay(channel.presenceState())});
-            channel.on("presence",{event:"leave"},()=>{updateOnlineUsersDisplay(channel.presenceState())});
-            
-            channel.subscribe(async e=>{if("SUBSCRIBED"===e)await channel.track({username:username,online_at:(new Date).toISOString()}),console.log(`Kanala ${username} olarak (ID: ${uniqueUserId}) abone olundu.`)});
-        }
-        
-        function init(){
+        // --- BAŞLANGIÇ FONKSİYONU ---
+        function init() {
             setupColorPicker();
-            setupLeaderboardToggle();
             drawInitialGrid();
             fetchInitialCanvas();
             subscribeToChanges();
             checkCooldown();
-            updateLeaderboard(); 
-            setInterval(updateLeaderboard,30000);
         }
         
         handleUsername();
